@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>统计页 · 日历/走势 合并改造预览</title>
+<style>
+  :root{
+    --primary:#07C160; --income:#07C160; --expense:#FA5151;
+    --text:#1A1A1A; --text2:#666; --hint:#999;
+    --bg:#F6F6F6; --card:#fff; --divider:#F0F0F0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+    background:#E9ECEF; padding:28px 16px 48px; color:var(--text);
+  }
+  h1{font-size:20px;text-align:center;margin-bottom:6px;}
+  .sub{text-align:center;color:var(--text2);font-size:13px;margin-bottom:24px;}
+  .stage{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;}
+  .phone{
+    width:375px;background:var(--bg);border-radius:32px;overflow:hidden;
+    box-shadow:0 12px 40px rgba(0,0,0,.18);border:8px solid #1A1A1A;
+  }
+  .phone-title{text-align:center;font-size:13px;color:var(--text2);margin-bottom:10px;font-weight:600;}
+  .navbar{background:#fff;padding:14px 0;text-align:center;font-size:16px;font-weight:600;border-bottom:1px solid var(--divider);}
+  .body{padding:10px;}
+  .card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .ledger{display:flex;align-items:center;padding:8px 14px;background:#fff;border-radius:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .ledger .n{color:var(--primary);font-weight:600;font-size:15px;}
+  .ledger .h{color:var(--hint);font-size:12px;margin-left:4px;}
+  .tabs{display:flex;gap:8px;padding:0 0 10px;}
+  .tab{flex:1;text-align:center;padding:7px 0;border-radius:16px;background:#fff;font-size:14px;color:var(--text2);box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .tab.active{background:var(--primary);color:#fff;font-weight:600;}
+  .summary{display:flex;justify-content:space-around;text-align:center;}
+  .sv{font-size:19px;font-weight:700;}
+  .sl{font-size:12px;color:var(--hint);}
+  .sdiv{width:1px;background:var(--divider);}
+  .sextra{text-align:center;border-top:1px solid var(--divider);margin-top:10px;padding-top:8px;font-size:12px;color:var(--hint);}
+
+  /* 卡片头 */
+  .ch{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--divider);margin-bottom:10px;}
+  .ct{font-size:16px;font-weight:600;}
+  .chint{font-size:12px;color:var(--hint);}
+  /* 子切换 */
+  .subtabs{display:flex;gap:4px;background:#F6F6F6;border-radius:12px;padding:2px;margin-bottom:10px;}
+  .stab{flex:1;text-align:center;padding:5px 0;border-radius:10px;font-size:14px;color:var(--text2);}
+  .stab.active{background:var(--primary);color:#fff;font-weight:600;}
+  /* 月份切换 */
+  .nav{display:flex;align-items:center;justify-content:center;gap:20px;padding-bottom:10px;}
+  .navb{width:30px;height:30px;border-radius:50%;background:#fff;border:1px solid var(--divider);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text2);}
+  .navt{font-size:17px;font-weight:700;min-width:110px;text-align:center;}
+  /* 日历 */
+  .wd{display:flex;border-bottom:1px solid var(--divider);padding-bottom:4px;margin-bottom:4px;}
+  .wd>div{width:14.285%;text-align:center;font-size:11px;color:var(--hint);}
+  .grid{display:flex;flex-wrap:wrap;}
+  .cell{width:14.285%;min-height:62px;display:flex;flex-direction:column;align-items:center;padding:3px 0;border-radius:8px;}
+  .cell.empty{visibility:hidden;}
+  .dnum{width:22px;height:22px;line-height:22px;text-align:center;font-size:13px;border-radius:50%;}
+  .dnum.today{background:var(--primary);color:#fff;font-weight:700;}
+  .dnum.has{font-weight:600;}
+  .amt{margin-top:1px;display:flex;flex-direction:column;align-items:center;width:100%;}
+  .amt>div{font-size:9px;line-height:1.25;max-width:100%;padding:0 1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  .amt .e{color:var(--expense);}
+  .amt .i{color:var(--income);}
+  .caltotal{display:flex;justify-content:space-around;margin-top:10px;padding-top:10px;border-top:1px solid var(--divider);font-size:12px;color:var(--hint);}
+  .tip{text-align:center;font-size:11px;color:var(--hint);padding-top:10px;}
+  /* 折线图 */
+  .lc{display:flex;align-items:flex-start;padding-top:4px;}
+  .ly{position:relative;width:34px;flex-shrink:0;}
+  .lyl{position:absolute;left:0;width:31px;text-align:right;font-size:9px;color:var(--hint);transform:translateY(50%);white-space:nowrap;}
+  .ls{flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;}
+  .ls::-webkit-scrollbar{height:4px;}
+  .ls::-webkit-scrollbar-thumb{background:#DDD;border-radius:2px;}
+  .lin{position:relative;}
+  .lp{position:relative;width:100%;overflow:hidden;}
+  .lg{position:absolute;left:0;height:1px;background:var(--divider);}
+  .la{position:absolute;left:0;bottom:0;width:100%;background:linear-gradient(180deg,rgba(7,193,96,.28),rgba(7,193,96,0));}
+  .lseg{position:absolute;height:2px;border-radius:1px;background:#C8C9CC;transform-origin:0 50%;}
+  .lseg.active{background:linear-gradient(90deg,#07C160,#06AD56);}
+  .ldot{position:absolute;width:6px;height:6px;border-radius:50%;background:#fff;border:1px solid #C8C9CC;}
+  .ldot.active{border:1.5px solid #07C160;}
+  .ldottip{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);font-size:9px;color:var(--expense);white-space:nowrap;}
+  .lx{position:relative;height:20px;margin-top:3px;}
+  .lx>div{position:absolute;top:0;text-align:center;font-size:9px;color:var(--hint);}
+  .note{max-width:800px;margin:28px auto 0;background:#fff;border-radius:14px;padding:18px 22px;font-size:13px;line-height:1.9;color:var(--text2);box-shadow:0 2px 10px rgba(0,0,0,.06);}
+  .note b{color:var(--text);}
+  .note code{background:#F2F4F7;padding:1px 6px;border-radius:4px;font-size:12px;color:#C7254E;}
+</style>
+</head>
+<body>
+<h1>统计页 · 日视图改造预览</h1>
+<p class="sub">左：看日历（日期下方显示每日收支）　右：看走势（折线图）</p>
+<div class="stage" id="stage"></div>
+
+<div class="note">
+  <b>本次改动</b><br>
+  1. 日历每格在日期数字下方同时显示<b>支出（红）</b>与<b>收入（绿）</b>，缩略规则：≥1万 → <code>1.2万</code>，≥1000 → <code>1.2k</code>，≥10 → 整数，否则保留 1 位小数。<br>
+  2. 日历与趋势合并为同一张卡片，顶部用 <b>看日历 / 看走势</b> 切换（沿用周视图的子 Tab 样式），月份切换 ‹ › 两个模式共用。<br>
+  3. 趋势由柱状图改为<b>折线图</b>：含 Y 轴 4 档刻度、横向网格线、面积渐变填充、数据圆点与数值气泡，横向可滑动；点击圆点弹出当天明细。<br>
+  4. 顺带修掉一个隐性 Bug：日历格子原先缺 <code>expense</code>/<code>income</code> 原始值，导致 <code>wx:if</code> 判断恒为假、金额一直不显示。
+</div>
+
+<script>
+// ===== 与 statistics.js 完全一致的几何算法（此处 px = rpx/2，视口 375px）=====
+const S = 0.5;
+const COL_W = 56*S, PLOT_H = 200*S, TOP_PAD = 48*S, DOT = 12*S, TOTAL_H = PLOT_H + TOP_PAD;
+
+function niceCeil(max){
+  if(!max||max<=0) return 100;
+  const steps=[1,1.1,1.2,1.5,2,2.5,3,4,5,6,8,10];
+  const exp=Math.floor(Math.log10(max)), base=Math.pow(10,exp), n=max/base;
+  const step=steps.find(s=>n<=s+1e-9)||10;
+  return Math.max(100, Math.round(step*base));
+}
+function shorten(a){
+  const y=(Number(a)||0)/100;
+  if(y<=0) return '0';
+  if(y>=10000) return (y/10000).toFixed(1)+'万';
+  if(y>=1000) return (y/1000).toFixed(1)+'k';
+  return y>=10? y.toFixed(0) : y.toFixed(1);
+}
+function buildLine(days){
+  const vals=days.map(d=>Number(d.expense)||0);
+  const max=niceCeil(Math.max(...vals,0));
+  const totalW=days.length*COL_W;
+  const pts=days.map((d,i)=>{
+    const v=Number(d.expense)||0, x=i*COL_W+COL_W/2, y=max>0?(v/max)*PLOT_H:0;
+    return {day:d.day,date:d.date,v,x,y,dl:x-DOT/2,db:y-DOT/2,ll:x-COL_W/2,fmt:v>0?shorten(v):''};
+  });
+  const segs=[];
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i],b=pts[i+1],dx=b.x-a.x,dy=b.y-a.y;
+    segs.push({l:a.x,b:a.y,w:Math.sqrt(dx*dx+dy*dy),r:(Math.atan2(-dy,dx)*180)/Math.PI,act:a.v>0||b.v>0});
+  }
+  const ap=pts.map(p=>`${((p.x/totalW)*100).toFixed(2)}% ${(100-(p.y/PLOT_H)*100).toFixed(2)}%`);
+  const ys=[1,2/3,1/3,0].map(r=>({b:r*PLOT_H,t:shorten(Math.round(max*r))}));
+  return {totalW,max,pts,segs,ys,area:`polygon(0% 100%, ${ap.join(', ')}, 100% 100%)`};
+}
+
+// ===== 造 2026 年 8 月数据 =====
+const EXP=[0,3250,8900,0,1520,0,0,6800,23400,0,1200,4500,0,7800,0,3200,990,0,5600,12500,3400,0,0,8800,2100,0,6700,15300,0,4200,7600];
+const INC=[0,0,0,0,1200000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,850000,0,0,0,0,0,0,0,0,0,0,0];
+const days=EXP.map((e,i)=>({day:i+1,date:`2026-08-${String(i+1).padStart(2,'0')}`,expense:e,income:INC[i]}));
+const today=20;
+const startOffset=5, lastDay=31;
+
+function cells(){
+  const out=[];
+  for(let i=0;i<startOffset;i++) out.push({empty:true});
+  for(let d=1;d<=lastDay;d++){
+    const e=EXP[d-1]||0, inc=INC[d-1]||0;
+    out.push({day:d,isToday:d===today,has:e>0||inc>0,e,inc,fe:shorten(e),fi:shorten(inc)});
+  }
+  while(out.length%7) out.push({empty:true});
+  return out;
+}
+
+function renderCalendar(){
+  const grid=cells().map(c=>c.empty?'<div class="cell empty"></div>':`
+    <div class="cell">
+      <div class="dnum ${c.isToday?'today':''} ${c.has?'has':''}">${c.day}</div>
+      <div class="amt">
+        ${c.e>0?`<div class="e">${c.fe}</div>`:''}
+        ${c.inc>0?`<div class="i">${c.fi}</div>`:''}
+      </div>
+    </div>`).join('');
+  return `
+  <div class="ch"><span class="ct">📅 每日收支</span><span class="chint">2026年8月</span></div>
+  <div class="subtabs"><div class="stab active">看日历</div><div class="stab">看走势</div></div>
+  <div class="nav"><div class="navb">‹</div><div class="navt">2026年8月</div><div class="navb">›</div></div>
+  <div class="wd">${['一','二','三','四','五','六','日'].map(w=>`<div>${w}</div>`).join('')}</div>
+  <div class="grid">${grid}</div>
+  <div class="caltotal"><span>本月支出 <b style="color:var(--expense)">¥1,596.10</b></span><span>本月收入 <b style="color:var(--income)">¥20,500.00</b></span></div>
+  <div class="tip">点击日期查看当天账目明细 · ‹ › 切换月份 · 点击月份标题回到今天</div>`;
+}
+
+function renderTrend(){
+  const c=buildLine(days);
+  const yl=c.ys.map(y=>`<div class="lyl" style="bottom:${y.b}px">${y.t}</div>`).join('');
+  const gl=c.ys.map(y=>`<div class="lg" style="bottom:${y.b}px;width:${c.totalW}px"></div>`).join('');
+  const sg=c.segs.map(s=>`<div class="lseg ${s.act?'active':''}" style="left:${s.l}px;bottom:${s.b}px;width:${s.w}px;transform:rotate(${s.r}deg)"></div>`).join('');
+  const dt=c.pts.map(p=>`<div class="ldot ${p.v>0?'active':''}" style="left:${p.dl}px;bottom:${p.db}px">${p.v>0?`<div class="ldottip">${p.fmt}</div>`:''}</div>`).join('');
+  const xl=c.pts.map(p=>`<div style="left:${p.ll}px;width:${COL_W}px">${p.day}</div>`).join('');
+  return `
+  <div class="ch"><span class="ct">📈 每日支出走势</span><span class="chint">2026年8月</span></div>
+  <div class="subtabs"><div class="stab">看日历</div><div class="stab active">看走势</div></div>
+  <div class="nav"><div class="navb">‹</div><div class="navt">2026年8月</div><div class="navb">›</div></div>
+  <div class="lc">
+    <div class="ly" style="height:${TOTAL_H}px">${yl}</div>
+    <div class="ls">
+      <div class="lin" style="width:${c.totalW}px">
+        <div class="lp" style="height:${TOTAL_H}px">
+          ${gl}
+          <div class="la" style="height:${PLOT_H}px;-webkit-clip-path:${c.area};clip-path:${c.area}"></div>
+          ${sg}${dt}
+        </div>
+        <div class="lx">${xl}</div>
+      </div>
+    </div>
+  </div>
+  <div class="tip">← 左右滑动查看整月走势 · 点击圆点看当天明细 →</div>`;
+}
+
+function chrome(title,inner){
+  return `<div class="phone-title">${title}</div><div class="phone">
+    <div class="navbar">统计</div>
+    <div class="body">
+      <div class="ledger"><span>📒</span><span class="n">我的账本</span><span class="h">（在首页切换）</span></div>
+      <div class="tabs"><div class="tab active">日</div><div class="tab">周</div><div class="tab">月</div><div class="tab">年</div></div>
+      <div class="card"><div class="summary">
+        <div><div class="sv" style="color:var(--expense)">¥125.00</div><div class="sl">今日支出</div></div>
+        <div class="sdiv"></div>
+        <div><div class="sv" style="color:var(--income)">¥0.00</div><div class="sl">今日收入</div></div>
+        <div class="sdiv"></div>
+        <div><div class="sv" style="color:var(--expense)">-¥125.00</div><div class="sl">结余</div></div>
+      </div><div class="sextra">记账 3 笔 · 2026-08-20 ~ 2026-08-20</div></div>
+      <div class="card">${inner}</div>
+      <div style="height:34px"></div>
+    </div></div>`;
+}
+
+document.getElementById('stage').innerHTML =
+  '<div>'+chrome('看日历（新）', renderCalendar())+'</div>' +
+  '<div>'+chrome('看走势（新 · 折线图）', renderTrend())+'</div>';
+</script>
+</body>
+</html>

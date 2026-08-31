@@ -1,0 +1,151 @@
+<!-- pages/ledger/ledger.wxml — 共享账本管理 -->
+
+<view class="page-container">
+
+  <!-- 头部 -->
+  <view class="ledger-header">
+    <text class="ledger-header-title">共享账本</text>
+    <text class="ledger-header-sub">和家人朋友一起记账，账单一目了然</text>
+  </view>
+
+  <!-- 个人账本（固定展示） -->
+  <view class="section-label">我的账本</view>
+  <view class="personal-card">
+    <text class="personal-icon">📒</text>
+    <view class="personal-info">
+      <text class="personal-name">我的账本</text>
+      <text class="personal-desc">仅自己可见，私密记账</text>
+    </view>
+  </view>
+
+  <!-- 共享账本列表 -->
+  <view class="section-label">
+    共享账本
+    <text class="section-count" wx:if="{{ledgers.length > 0}}">{{ledgers.length}}</text>
+  </view>
+
+  <view class="ledger-list" wx:if="{{ledgers.length > 0}}">
+    <view
+      class="ledger-item"
+      wx:for="{{ledgers}}"
+      wx:key="_id"
+      data-id="{{item._id}}"
+      data-name="{{item.name}}"
+      bindtap="openDetail"
+    >
+      <view class="ledger-item-avatar">👥</view>
+      <view class="ledger-item-info">
+        <text class="ledger-item-name">{{item.name}}</text>
+        <text class="ledger-item-meta">{{item.memberCount}} 人 · {{item.isOwner ? '创建者' : '成员'}}</text>
+      </view>
+      <text class="ledger-item-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:if="{{!loading && ledgers.length === 0}}">
+    <text class="empty-icon">🤝</text>
+    <text class="empty-text">还没有共享账本</text>
+    <text class="empty-sub">创建一个，邀请家人朋友一起记账</text>
+  </view>
+
+  <!-- 底部操作 -->
+  <view class="action-bar">
+    <button class="action-btn create" bindtap="openCreate">＋ 创建账本</button>
+    <button class="action-btn join" bindtap="openJoin">🔑 邀请码加入</button>
+  </view>
+
+  <!-- ============ 创建弹层 ============ -->
+  <view class="mask" wx:if="{{showCreate}}" bindtap="closeCreate">
+    <view class="sheet" catchtap="noop">
+      <text class="sheet-title">创建共享账本</text>
+      <input
+        class="sheet-input"
+        placeholder="如：家庭账本 / 旅行账本"
+        value="{{newLedgerName}}"
+        maxlength="20"
+        bindinput="onLedgerNameInput"
+      />
+      <view class="sheet-actions">
+        <button class="sheet-btn cancel" bindtap="closeCreate">取消</button>
+        <button class="sheet-btn confirm" bindtap="confirmCreate">创建</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- ============ 邀请码加入弹层 ============ -->
+  <view class="mask" wx:if="{{showJoin}}" bindtap="closeJoin">
+    <view class="sheet" catchtap="noop">
+      <text class="sheet-title">邀请码加入</text>
+      <input
+        class="sheet-input code"
+        placeholder="输入 6 位邀请码"
+        value="{{joinCode}}"
+        maxlength="6"
+        bindinput="onJoinCodeInput"
+      />
+      <view class="sheet-actions">
+        <button class="sheet-btn cancel" bindtap="closeJoin">取消</button>
+        <button class="sheet-btn confirm" bindtap="confirmJoin">加入</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- ============ 成员 / 详情弹层 ============ -->
+  <view class="mask" wx:if="{{showDetail}}" bindtap="closeDetail">
+    <view class="sheet detail-sheet" catchtap="noop">
+      <view class="detail-header">
+        <text class="detail-name">{{detail.name}}</text>
+        <text class="detail-badge" wx:if="{{detail.isOwner}}">创建者</text>
+      </view>
+
+      <!-- 邀请码 -->
+      <view class="invite-box">
+        <view class="invite-left">
+          <text class="invite-label">邀请码</text>
+          <text class="invite-code">{{detail.inviteCode}}</text>
+        </view>
+        <view class="invite-ops">
+          <button class="mini-btn" bindtap="copyInviteCode">复制</button>
+          <button class="mini-btn ghost" wx:if="{{detail.isOwner}}" bindtap="regenerateCode">重置</button>
+        </view>
+      </view>
+      <button class="share-btn" open-type="share">分享给微信好友加入</button>
+
+      <!-- 成员列表 -->
+      <text class="detail-subtitle">成员（{{detail.members.length}}）</text>
+      <scroll-view class="member-scroll" scroll-y>
+        <view class="member-item" wx:for="{{detail.members}}" wx:key="openid">
+          <view class="member-avatar">{{item.isOwner ? '👑' : '👤'}}</view>
+          <view class="member-info">
+            <text class="member-name">{{item.displayName}}</text>
+            <text class="member-role">{{item.isOwner ? '创建者' : '成员'}}</text>
+          </view>
+          <text
+            class="member-remove"
+            wx:if="{{detail.isOwner && !item.isOwner}}"
+            data-openid="{{item.openid}}"
+            data-name="{{item.displayName}}"
+            catchtap="removeMember"
+          >移除</text>
+        </view>
+      </scroll-view>
+
+      <!-- 底部操作 -->
+      <view class="detail-actions">
+        <button class="detail-btn switch" bindtap="switchToLedger" data-id="{{detail._id}}" data-name="{{detail.name}}">切换到此账本</button>
+        <button
+          class="detail-btn danger"
+          wx:if="{{detail.isOwner}}"
+          bindtap="dissolveLedger"
+        >解散账本</button>
+        <button
+          class="detail-btn danger"
+          wx:else
+          bindtap="quitLedger"
+        >退出账本</button>
+      </view>
+    </view>
+  </view>
+
+</view>

@@ -1,0 +1,221 @@
+/* pages/mine/mine.wxss — 我的页面样式 */
+
+.mine-page {
+  padding: var(--spacing-sm) 0 var(--spacing-xl);
+}
+
+/* ============ 用户卡片 ============ */
+.user-card {
+  margin: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-md);
+  background: linear-gradient(135deg, #07C160, #06AD56);
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.25);
+}
+
+.user-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  border: 4rpx solid rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60rpx;
+}
+
+.user-avatar-badge {
+  position: absolute;
+  right: -4rpx;
+  bottom: -4rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #FFFFFF;
+  color: #07C160;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+  color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.user-nickname {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.user-nickname-empty {
+  font-weight: 400;
+  font-size: var(--font-lg);
+  opacity: 0.85;
+}
+
+.user-openid,
+.user-login-count {
+  font-size: var(--font-xs);
+  opacity: 0.8;
+}
+
+.user-edit-btn {
+  flex-shrink: 0;
+  padding: 12rpx 24rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.9);
+  color: #07C160;
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+/* ============ 数据概览 ============ */
+.overview-card {
+  margin-bottom: var(--spacing-sm);
+}
+
+.overview-ledger {
+  display: flex;
+  align-items: center;
+  padding: 4rpx 0 16rpx;
+  border-bottom: 1rpx solid var(--color-border, #eee);
+  margin-bottom: 8rpx;
+}
+.overview-ledger-icon {
+  font-size: 28rpx;
+  margin-right: 10rpx;
+}
+.overview-ledger-name {
+  font-size: var(--font-sm, 26rpx);
+  font-weight: 600;
+  color: var(--color-primary, #07c160);
+}
+
+.overview-row {
+  display: flex;
+  justify-content: space-around;
+  padding: var(--spacing-sm) 0;
+}
+
+.overview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.overview-value {
+  font-size: var(--font-lg);
+  font-weight: 700;
+}
+
+.overview-value.expense { color: var(--color-expense); }
+.overview-value.income { color: var(--color-income); }
+
+.overview-label {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+.overview-divider {
+  width: 1rpx;
+  background: var(--color-divider);
+}
+
+/* 预算进度（迷你） */
+.budget-mini {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1rpx solid var(--color-divider);
+}
+
+.budget-mini-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: 8rpx;
+}
+
+.budget-mini-track {
+  height: 12rpx;
+  border-radius: 6rpx;
+  background: var(--color-divider);
+  overflow: hidden;
+}
+
+.budget-mini-fill {
+  height: 100%;
+  border-radius: 6rpx;
+  background: linear-gradient(90deg, #07C160, #06AD56);
+}
+
+.budget-mini-fill.over {
+  background: linear-gradient(90deg, #FA5151, #E64340);
+}
+
+/* ============ 功能菜单 ============ */
+.menu-card {
+  padding: 0 var(--spacing-md);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+  border-bottom: 1rpx solid var(--color-divider);
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-icon {
+  font-size: 44rpx;
+  width: 64rpx;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.menu-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.menu-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.menu-desc {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+.menu-arrow {
+  font-size: 32rpx;
+  color: var(--color-text-hint);
+}

@@ -1,0 +1,19 @@
+<!-- components/expense-card/expense-card.wxml -->
+<view class="expense-card" bindtap="onTap">
+  <view class="expense-icon">
+    <text>{{icon}}</text>
+  </view>
+  <view class="expense-info">
+    <text class="expense-name">{{item.categoryName}}</text>
+    <text class="expense-desc" wx:if="{{item.description}}">{{item.description}}</text>
+  </view>
+  <view class="expense-amount-wrapper">
+    <text class="expense-amount {{item.type === 'income' ? 'income' : 'expense'}}">
+      {{sign}}¥{{formattedAmount}}
+    </text>
+    <view class="expense-meta">
+      <text class="expense-date">{{formattedDate}}</text>
+      <text class="expense-recorder" wx:if="{{item.recorderName}}">{{item.recorderName}}</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,36 @@
+# ============ 系统 / 编辑器 ============
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+
+# ============ 微信开发者工具私有配置（含本地设置，不入版本库） ============
+project.private.config.json
+
+# ============ 依赖（云函数各自部署时 npm install） ============
+node_modules/
+**/node_modules/
+cloudfunctions/*/node_modules/
+
+# ============ 小程序 npm 构建产物 ============
+miniprogram_npm/
+
+# ============ 运行期数据（不入库，仅保留 schema 与说明） ============
+database/budgets.json
+database/expenses.json
+database/ledgers.json
+database/users.json
+
+# ============ 本地生成的预览文件（非源码） ============
+preview.html
+
+# ============ 密钥 / 本地环境变量 ============
+.env
+.env.*
+!.env.example
+*.local
+
+# ============ 构建 / 缓存 ============
+dist/
+.temp/
+.cache/

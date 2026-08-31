@@ -1,0 +1,116 @@
+/* pages/budget/budget.wxss — 预算设置页样式 */
+
+.page-container {
+  padding: var(--spacing-md);
+}
+
+/* ============ 当前消费 ============ */
+.current-card {
+  margin-bottom: var(--spacing-sm);
+}
+
+.current-row {
+  display: flex;
+  justify-content: space-around;
+  padding: var(--spacing-sm) 0;
+}
+
+.current-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.current-value {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.current-value.expense { color: var(--color-expense); }
+.current-value.income { color: var(--color-income); }
+
+.current-label {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+.current-divider {
+  width: 1rpx;
+  background: var(--color-divider);
+}
+
+.current-percent {
+  text-align: center;
+  padding-top: var(--spacing-sm);
+  border-top: 1rpx solid var(--color-divider);
+  font-size: var(--font-xs);
+  color: var(--color-expense);
+}
+
+/* ============ 输入区 ============ */
+.card-tip {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: var(--spacing-sm);
+  padding: 20rpx 24rpx;
+  background: var(--color-bg-page);
+  border-radius: 16rpx;
+}
+
+.input-prefix {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.input-field {
+  flex: 1;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.input-suffix {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+/* ============ 提示 ============ */
+.budget-note {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: rgba(7, 193, 96, 0.06);
+  border-radius: 16rpx;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* ============ 保存按钮 ============ */
+.btn-primary {
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: linear-gradient(135deg, #07C160, #06AD56);
+  color: #FFFFFF;
+  font-size: var(--font-md);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+}
+
+.btn-primary.disabled {
+  opacity: 0.6;
+}
+
+.save-btn {
+  margin-top: var(--spacing-lg);
+}

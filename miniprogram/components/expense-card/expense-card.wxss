@@ -1,0 +1,92 @@
+/* components/expense-card/expense-card.wxss */
+.expense-card {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) 0;
+  gap: var(--spacing-sm);
+}
+
+.expense-card:not(:last-child) {
+  border-bottom: 1rpx solid var(--color-divider);
+}
+
+.expense-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.expense-icon text {
+  font-size: 32rpx;
+}
+
+.expense-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.expense-name {
+  font-size: var(--font-base);
+  color: var(--color-text-primary);
+  font-weight: 500;
+  display: block;
+}
+
+.expense-desc {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  margin-top: 2rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.expense-amount-wrapper {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.expense-amount {
+  font-size: var(--font-base);
+  font-weight: 600;
+  display: block;
+}
+
+.expense-amount.expense {
+  color: var(--color-expense);
+}
+
+.expense-amount.income {
+  color: var(--color-income);
+}
+
+.expense-meta {
+  margin-top: 2rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+}
+
+.expense-date {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+.expense-recorder {
+  font-size: var(--font-xs);
+  color: var(--color-primary, #07C160);
+  background: var(--color-primary-light, #E8F8EF);
+  padding: 1rpx 10rpx;
+  border-radius: 16rpx;
+  max-width: 150rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

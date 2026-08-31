@@ -1,0 +1,75 @@
+<!-- pages/budget/budget.wxml — 预算设置页 -->
+
+<view class="page-container">
+
+  <!-- 当前消费情况 -->
+  <view class="card current-card">
+    <view class="card-header">
+      <text class="card-title">当前消费</text>
+    </view>
+    <view class="current-row">
+      <view class="current-item">
+        <text class="current-value expense">¥{{_fmtMonthExpense}}</text>
+        <text class="current-label">本月已支出</text>
+      </view>
+      <view class="current-divider"></view>
+      <view class="current-item">
+        <text class="current-value expense">¥{{_fmtYearExpense}}</text>
+        <text class="current-label">今年已支出</text>
+      </view>
+    </view>
+    <view class="current-percent" wx:if="{{monthlyBudget}}">
+      <text>本月预算已用 {{budgetPercent}}%</text>
+    </view>
+  </view>
+
+  <!-- 月度预算 -->
+  <view class="card">
+    <view class="card-header">
+      <text class="card-title">月度预算</text>
+      <text class="card-tip">每月 1 日重置</text>
+    </view>
+    <view class="input-row">
+      <text class="input-prefix">¥</text>
+      <input
+        class="input-field"
+        type="digit"
+        placeholder="输入每月预算，如 3000"
+        value="{{monthlyBudget}}"
+        bindinput="onMonthlyInput"
+      />
+      <text class="input-suffix">元/月</text>
+    </view>
+  </view>
+
+  <!-- 年度预算 -->
+  <view class="card">
+    <view class="card-header">
+      <text class="card-title">年度预算</text>
+      <text class="card-tip">可选</text>
+    </view>
+    <view class="input-row">
+      <text class="input-prefix">¥</text>
+      <input
+        class="input-field"
+        type="digit"
+        placeholder="输入年度预算，如 50000"
+        value="{{yearBudget}}"
+        bindinput="onYearInput"
+      />
+      <text class="input-suffix">元/年</text>
+    </view>
+  </view>
+
+  <!-- 提示 -->
+  <view class="budget-note">
+    <text>💡 设置预算后，统计页会智能分析消费节奏，并在接近预算上限时给出预警建议。</text>
+  </view>
+
+  <!-- 保存按钮 -->
+  <view class="btn-primary save-btn {{saving ? 'disabled' : ''}}" bindtap="saveBudget">
+    {{saving ? '保存中...' : '保存预算'}}
+  </view>
+
+  <view class="safe-bottom" style="height: 60rpx;"></view>
+</view>

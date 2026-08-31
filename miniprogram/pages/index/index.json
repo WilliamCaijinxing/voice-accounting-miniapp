@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "expense-card": "/components/expense-card/expense-card"
+  },
+  "navigationBarTitleText": "语音记账",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

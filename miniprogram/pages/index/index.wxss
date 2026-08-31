@@ -1,0 +1,286 @@
+/* pages/index/index.wxss — 首页样式 */
+
+/* ============ 英雄卡片 ============ */
+.hero-card {
+  background: linear-gradient(135deg, #07C160 0%, #06AD56 100%);
+  margin: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg) var(--spacing-md);
+  color: #FFFFFF;
+}
+
+.hero-date {
+  font-size: var(--font-xs);
+  opacity: 0.85;
+  margin-bottom: var(--spacing-sm);
+}
+
+.hero-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: var(--spacing-sm) 0;
+}
+
+.hero-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.hero-label {
+  font-size: var(--font-xs);
+  opacity: 0.8;
+}
+
+.hero-amount {
+  font-size: var(--font-xl);
+  font-weight: 700;
+}
+
+.hero-amount.expense { color: #FFD4D4; }
+.hero-amount.income { color: #D4FFD4; }
+
+.hero-count {
+  font-size: var(--font-lg);
+  font-weight: 600;
+}
+
+.hero-divider {
+  width: 1rpx;
+  height: 48rpx;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 分类占比条 */
+.category-bar {
+  display: flex;
+  margin-top: var(--spacing-md);
+  height: 8rpx;
+  border-radius: 4rpx;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.category-bar-segment {
+  min-width: 4rpx;
+  transition: flex 0.3s ease;
+}
+
+/* 今日空状态 */
+.empty-today {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-md) 0;
+  opacity: 0.8;
+}
+
+.empty-icon { font-size: 48rpx; margin-bottom: 8rpx; }
+.empty-text { font-size: var(--font-sm); }
+.empty-hint { font-size: var(--font-xs); opacity: 0.7; margin-top: 4rpx; }
+
+/* ============ 语音入口 ============ */
+.voice-quick-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-lg) 0 var(--spacing-md);
+}
+
+.voice-btn-outer {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #07C160, #06AD56);
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.voice-btn-outer:active {
+  transform: scale(0.92);
+}
+
+.voice-btn-inner {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-btn-icon {
+  font-size: 48rpx;
+}
+
+.voice-btn-label {
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ============ 卡片通用 ============ */
+.card { margin-bottom: 0; }
+
+.card-header {
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1rpx solid var(--color-divider);
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-title {
+  font-size: var(--font-base);
+  font-weight: 600;
+}
+
+.card-link {
+  font-size: var(--font-sm);
+  color: var(--color-primary);
+}
+
+/* ============ 月度概览 ============ */
+.month-card {
+  margin-top: 0;
+}
+
+.month-stats-row {
+  display: flex;
+  justify-content: space-around;
+  padding: var(--spacing-sm) 0;
+}
+
+.month-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.month-stat-value {
+  font-size: var(--font-lg);
+  font-weight: 700;
+}
+
+.month-stat-value.expense { color: var(--color-expense); }
+.month-stat-value.income { color: var(--color-income); }
+
+.month-stat-label {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+/* ============ 本月预算进度 ============ */
+.budget-card {
+  margin-top: var(--spacing-sm);
+}
+
+.budget-bar-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: 8rpx;
+}
+
+.budget-bar-track {
+  height: 16rpx;
+  border-radius: 8rpx;
+  background: var(--color-divider);
+  overflow: hidden;
+}
+
+.budget-bar-fill {
+  height: 100%;
+  border-radius: 8rpx;
+  background: linear-gradient(90deg, #07C160, #06AD56);
+  transition: width 0.4s ease;
+}
+
+.budget-bar-fill.danger {
+  background: linear-gradient(90deg, #FFB03A, #FF9500);
+}
+
+.budget-bar-fill.over {
+  background: linear-gradient(90deg, #FA5151, #E64340);
+}
+
+.budget-bar-detail {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8rpx;
+  font-size: var(--font-xs);
+}
+
+.budget-bar-daily {
+  color: var(--color-text-hint);
+}
+
+/* ============ 最近账单 ============ */
+.recent-card {
+  margin-top: var(--spacing-sm);
+}
+
+.empty-recent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-xl) 0;
+  color: var(--color-text-hint);
+  font-size: var(--font-sm);
+}
+
+.empty-recent .empty-icon {
+  font-size: 48rpx;
+  margin-bottom: 8rpx;
+}
+
+/* ============ 账本切换栏 ============ */
+.ledger-switch {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-md) 0;
+  gap: var(--spacing-sm);
+}
+
+.ledger-scroll {
+  flex: 1;
+  white-space: nowrap;
+  display: flex;
+}
+
+.ledger-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 10rpx 22rpx;
+  margin-right: var(--spacing-xs);
+  background: var(--color-bg-card, #FFFFFF);
+  border: 1rpx solid var(--color-divider, #EEE);
+  border-radius: 32rpx;
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary, #666);
+}
+
+.ledger-chip.active {
+  background: var(--color-primary-light, #E8F8EF);
+  border-color: var(--color-primary, #07C160);
+  color: var(--color-primary, #07C160);
+  font-weight: 600;
+}
+
+.ledger-chip-icon {
+  font-size: 24rpx;
+}
+
+.ledger-manage {
+  flex-shrink: 0;
+  font-size: var(--font-sm);
+  color: var(--color-primary, #07C160);
+  padding-left: 8rpx;
+}

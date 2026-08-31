@@ -1,0 +1,132 @@
+<!-- pages/bill-detail/bill-detail.wxml — 账单详情与编辑 -->
+
+<!-- 加载中 -->
+<view class="loading-wrap" wx:if="{{loading}}">
+  <text class="loading-text">加载中...</text>
+</view>
+
+<!-- 账单详情 -->
+<view class="page-container" wx:if="{{!loading && bill}}">
+
+  <!-- 金额展示 -->
+  <view class="amount-card">
+    <view class="amount-type-row">
+      <text class="amount-type {{bill.type === 'income' ? 'income' : 'expense'}}">
+        {{bill.type === 'income' ? '收入' : '支出'}}
+      </text>
+    </view>
+
+    <!-- 查看模式 -->
+    <view class="amount-display" wx:if="{{!editing}}">
+      <text class="amount {{bill.type === 'income' ? 'income' : 'expense'}}">
+        {{bill.type === 'income' ? '+' : '-'}}¥{{bill._fmtAmount}}
+      </text>
+    </view>
+
+    <!-- 编辑模式：金额输入 -->
+    <view class="amount-edit" wx:if="{{editing}}">
+      <!-- 类型切换 -->
+      <view class="type-switcher">
+        <view class="type-btn {{bill.type === 'expense' ? 'active expense' : ''}}"
+          data-type="expense" bindtap="switchType">支出</view>
+        <view class="type-btn {{bill.type === 'income' ? 'active income' : ''}}"
+          data-type="income" bindtap="switchType">收入</view>
+      </view>
+      <!-- 金额输入 -->
+      <view class="amount-input-row">
+        <text class="amount-prefix">¥</text>
+        <input class="amount-input" type="digit"
+          value="{{bill._rawAmount || bill._fmtAmount}}"
+          placeholder="0.00"
+          bindinput="onAmountInput"
+          bindblur="onAmountBlur"
+          focus="{{true}}"
+        />
+      </view>
+    </view>
+  </view>
+
+  <!-- 详情卡片 -->
+  <view class="card detail-card">
+    <!-- 分类 -->
+    <view class="detail-field {{editing ? 'detail-field-column' : ''}}">
+      <text class="field-label">分类</text>
+
+      <!-- 查看模式：分类图标 + 名称 -->
+      <view class="field-value category-value" wx:if="{{!editing}}">
+        <text class="field-category-icon">{{bill._icon}}</text>
+        <text>{{bill.categoryName}}</text>
+      </view>
+
+      <!-- 编辑模式：多行网格，所有分类直接可见可点（避免横向滚动遮挡） -->
+      <view class="category-grid" wx:if="{{editing}}">
+        <view
+          wx:for="{{categories}}"
+          wx:key="id"
+          class="category-item {{bill.categoryId === item.id ? 'selected' : ''}}"
+          data-id="{{item.id}}"
+          data-name="{{item.name}}"
+          bindtap="selectCategory"
+        >
+          <text class="category-icon">{{item.icon}}</text>
+          <text class="category-name">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 日期 -->
+    <view class="detail-field">
+      <text class="field-label">日期</text>
+      <text class="field-value" wx:if="{{!editing}}">{{bill.date}}</text>
+      <picker wx:if="{{editing}}" mode="date" value="{{bill.date}}" start="2020-01-01" end="{{todayStr}}" bindchange="onDateChange">
+        <view class="field-value-edit">
+          <text>{{bill.date}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 备注 -->
+    <view class="detail-field">
+      <text class="field-label">备注</text>
+      <text class="field-value" wx:if="{{!editing && bill.description}}">{{bill.description}}</text>
+      <text class="field-value hint" wx:if="{{!editing && !bill.description}}">无</text>
+      <input class="desc-input" wx:if="{{editing}}"
+        value="{{bill.description}}"
+        placeholder="添加备注..."
+        bindinput="onDescInput"
+      />
+    </view>
+
+    <!-- 创建时间 -->
+    <view class="detail-field" wx:if="{{!editing}}">
+      <text class="field-label">创建时间</text>
+      <text class="field-value hint">{{bill.createdAt}}</text>
+    </view>
+
+    <!-- 记账人（共享账本） -->
+    <view class="detail-field" wx:if="{{!editing && recorderName}}">
+      <text class="field-label">记账人</text>
+      <text class="field-value">{{recorderName}}</text>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-bar">
+    <!-- 查看模式 -->
+    <block wx:if="{{!editing}}">
+      <button class="btn-edit" bindtap="toggleEdit">✏️ 修改</button>
+      <button class="btn-delete" bindtap="deleteBill">🗑 删除</button>
+    </block>
+
+    <!-- 编辑模式 -->
+    <block wx:if="{{editing}}">
+      <button class="btn-cancel" bindtap="toggleEdit">取消</button>
+      <button class="btn-save {{saving ? 'disabled' : ''}}" bindtap="saveBill" disabled="{{saving}}">
+        {{saving ? '保存中...' : '保存'}}
+      </button>
+    </block>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

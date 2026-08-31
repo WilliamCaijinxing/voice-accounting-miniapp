@@ -1,0 +1,88 @@
+<!-- pages/export/export.wxml — 账本数据导出页 -->
+
+<view class="page-container">
+  <view class="export-hero">
+    <text class="export-hero-icon">📤</text>
+    <text class="export-hero-title">导出账本</text>
+    <text class="export-hero-desc">导出为 CSV 格式，可用 Excel、WPS、Numbers 打开</text>
+  </view>
+
+  <!-- 当前导出账本提示 -->
+  <view class="ledger-tip">
+    <text class="ledger-tip-icon">{{currentLedgerName ? '📒' : ''}}</text>
+    <text class="ledger-tip-text">正在导出：{{currentLedgerName}}</text>
+  </view>
+
+  <!-- 时间范围选择 -->
+  <view class="card">
+    <view class="card-header">
+      <text class="card-title">选择时间范围</text>
+    </view>
+    <view class="range-list">
+      <view
+        wx:for="{{dateRanges}}"
+        wx:key="key"
+        class="range-item {{activeRange === item.key ? 'active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="selectRange"
+      >
+        <text class="range-item-label">{{item.label}}</text>
+        <view class="range-item-check">{{activeRange === item.key ? '✓' : ''}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 导出结果 -->
+  <view class="card" wx:if="{{result}}">
+    <view class="card-header">
+      <text class="card-title">导出结果</text>
+    </view>
+    <view class="result-list">
+      <view class="result-item">
+        <text class="result-label">账单笔数</text>
+        <text class="result-value">{{result.count}} 笔</text>
+      </view>
+      <view class="result-item">
+        <text class="result-label">总收入</text>
+        <text class="result-value income">¥{{result.totalIncome}}</text>
+      </view>
+      <view class="result-item">
+        <text class="result-label">总支出</text>
+        <text class="result-value expense">¥{{result.totalExpense}}</text>
+      </view>
+    </view>
+    <!-- 文件获取方式：解决"导出的文件不知道在哪里" -->
+    <view class="file-guide">
+      <view class="file-guide-title">📁 文件在哪里？</view>
+      <view class="file-guide-text">
+        CSV 保存在小程序本地目录，手机文件管理无法直接查看。推荐「转发到微信」发到文件传输助手，或「复制下载链接」在电脑浏览器打开。
+      </view>
+
+      <view class="file-actions">
+        <view class="btn-primary file-btn" bindtap="shareToWeChat">转发到微信</view>
+        <view class="btn-outline file-btn" bindtap="copyLink">复制下载链接</view>
+      </view>
+
+      <view class="file-extra">
+        <text class="file-extra-btn" bindtap="openLocalFile">尝试在小程序内打开</text>
+      </view>
+
+      <view class="file-preparing" wx:if="{{preparing}}">文件准备中...</view>
+
+      <view class="file-path-row" wx:if="{{localPath}}">
+        <text class="file-path-label">本地路径</text>
+        <text class="file-path">{{localPath}}</text>
+        <text class="file-path-copy" bindtap="copyPath">复制</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 导出按钮 -->
+  <view class="btn-primary export-btn {{exporting ? 'disabled' : ''}}" bindtap="doExport">
+    {{exporting ? '正在导出...' : '开始导出'}}
+  </view>
+
+  <view class="export-note">
+    <text>💡 提示：导出的 CSV 文件包含日期、类型、分类、金额、描述等完整字段，方便你在电脑上进行二次统计和分析。</text>
+  </view>
+</view>

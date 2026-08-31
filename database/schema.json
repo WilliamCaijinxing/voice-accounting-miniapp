@@ -1,0 +1,83 @@
+{
+  "collections": [
+    {
+      "name": "expenses",
+      "description": "用户账目记录表",
+      "permission": "仅创建者可读写",
+      "fields": [
+        {"name": "_id", "type": "string", "required": true, "description": "自动生成的文档ID"},
+        {"name": "_openid", "type": "string", "required": true, "description": "记账人openid（自动添加）"},
+        {"name": "ledgerId", "type": "string", "required": false, "description": "账本ID：空=个人账本，非空=共享账本"},
+        {"name": "amount", "type": "number", "required": true, "description": "金额，单位：分（100 = 1元）"},
+        {"name": "type", "type": "string", "required": true, "description": "类型：expense(支出) / income(收入)"},
+        {"name": "categoryId", "type": "string", "required": true, "description": "分类ID：food/transport/shopping/drinks/entertainment/housing/communication/medical/education/salary/other"},
+        {"name": "categoryName", "type": "string", "required": true, "description": "分类中文名：餐饮/交通/购物/饮品/娱乐/住房/通讯/医疗/教育/工资/其他"},
+        {"name": "date", "type": "string", "required": true, "description": "发生日期，格式 YYYY-MM-DD"},
+        {"name": "description", "type": "string", "required": false, "description": "备注描述"},
+        {"name": "createdAt", "type": "date", "required": true, "description": "创建时间（db.serverDate()）"},
+        {"name": "updatedAt", "type": "date", "required": true, "description": "更新时间（db.serverDate()）"}
+      ],
+      "indexes": [
+        {"name": "idx_openid_date", "keys": [{"field": "_openid", "direction": "asc"}, {"field": "date", "direction": "desc"}], "unique": false},
+        {"name": "idx_openid_type_date", "keys": [{"field": "_openid", "direction": "asc"}, {"field": "type", "direction": "asc"}, {"field": "date", "direction": "desc"}], "unique": false},
+        {"name": "idx_openid_category", "keys": [{"field": "_openid", "direction": "asc"}, {"field": "categoryId", "direction": "asc"}], "unique": false},
+        {"name": "idx_ledger_date", "keys": [{"field": "ledgerId", "direction": "asc"}, {"field": "date", "direction": "desc"}], "unique": false}
+      ]
+    },
+    {
+      "name": "users",
+      "description": "用户信息表",
+      "permission": "仅创建者可读写",
+      "fields": [
+        {"name": "_id", "type": "string", "required": true, "description": "自动生成的文档ID"},
+        {"name": "_openid", "type": "string", "required": true, "description": "用户openid（自动添加）"},
+        {"name": "nickname", "type": "string", "required": false, "description": "用户昵称"},
+        {"name": "avatar", "type": "string", "required": false, "description": "头像URL"},
+        {"name": "createdAt", "type": "date", "required": true, "description": "注册时间"},
+        {"name": "lastLoginAt", "type": "date", "required": true, "description": "最后登录时间"},
+        {"name": "loginCount", "type": "number", "required": true, "description": "登录次数"}
+      ],
+      "indexes": [
+        {"name": "idx_openid", "keys": [{"field": "_openid", "direction": "asc"}], "unique": false}
+      ]
+    },
+    {
+      "name": "budgets",
+      "description": "预算表（个人或共享账本）",
+      "permission": "仅创建者可读写",
+      "fields": [
+        {"name": "_id", "type": "string", "required": true, "description": "自动生成的文档ID"},
+        {"name": "_openid", "type": "string", "required": false, "description": "个人预算时=用户openid；共享预算时为空"},
+        {"name": "ledgerId", "type": "string", "required": false, "description": "账本ID：空=个人预算，非空=共享账本预算"},
+        {"name": "type", "type": "string", "required": true, "description": "预算类型：month(月度) / year(年度)"},
+        {"name": "ym", "type": "string", "required": true, "description": "月份标识 YYYY-MM（年度为 YYYY-00）"},
+        {"name": "year", "type": "number", "required": true, "description": "年份"},
+        {"name": "month", "type": "number", "required": true, "description": "月份（年度为 0）"},
+        {"name": "amount", "type": "number", "required": true, "description": "预算金额，单位：分"},
+        {"name": "createdAt", "type": "date", "required": true, "description": "创建时间"},
+        {"name": "updatedAt", "type": "date", "required": true, "description": "更新时间"}
+      ],
+      "indexes": [
+        {"name": "idx_openid_ym", "keys": [{"field": "_openid", "direction": "asc"}, {"field": "ym", "direction": "asc"}], "unique": false},
+        {"name": "idx_ledger_ym", "keys": [{"field": "ledgerId", "direction": "asc"}, {"field": "ym", "direction": "asc"}], "unique": false}
+      ]
+    },
+    {
+      "name": "ledgers",
+      "description": "共享账本/群组表",
+      "permission": "所有用户可读，仅创建者可写",
+      "fields": [
+        {"name": "_id", "type": "string", "required": true, "description": "自动生成的文档ID"},
+        {"name": "name", "type": "string", "required": true, "description": "账本名称"},
+        {"name": "ownerOpenid", "type": "string", "required": true, "description": "创建者openid"},
+        {"name": "members", "type": "array", "required": true, "description": "成员列表 [{openid, nickname, avatar, role, joinedAt}]"},
+        {"name": "inviteCode", "type": "string", "required": true, "description": "6位邀请码（唯一）"},
+        {"name": "createdAt", "type": "date", "required": true, "description": "创建时间"}
+      ],
+      "indexes": [
+        {"name": "idx_invite_code", "keys": [{"field": "inviteCode", "direction": "asc"}], "unique": true},
+        {"name": "idx_owner", "keys": [{"field": "ownerOpenid", "direction": "asc"}], "unique": false}
+      ]
+    }
+  ]
+}

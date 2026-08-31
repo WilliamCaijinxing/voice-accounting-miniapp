@@ -1,0 +1,10 @@
+{
+  "name": "voiceToText",
+  "version": "1.0.0",
+  "description": "腾讯云语音识别 — 录音文件转文字",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest",
+    "tencentcloud-sdk-nodejs": "latest"
+  }
+}

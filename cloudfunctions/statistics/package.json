@@ -1,0 +1,9 @@
+{
+  "name": "statistics",
+  "version": "1.0.0",
+  "description": "记账统计聚合云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

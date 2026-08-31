@@ -1,0 +1,9 @@
+{
+  "name": "voiceASR",
+  "version": "1.0.0",
+  "description": "语音识别云函数（调用腾讯云ASR）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

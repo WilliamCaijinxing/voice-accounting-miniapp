@@ -1,0 +1,141 @@
+<!-- pages/index/index.wxml — 首页仪表盘 -->
+
+<!-- 账本切换栏 -->
+<view class="ledger-switch">
+  <scroll-view class="ledger-scroll" scroll-x="true" enable-flex="true">
+    <view
+      wx:for="{{ledgers}}"
+      wx:key="id"
+      class="ledger-chip {{currentLedgerId === item.id ? 'active' : ''}}"
+      data-id="{{item.id}}"
+      data-type="{{item.type}}"
+      data-name="{{item.name}}"
+      bindtap="switchLedger"
+    >
+      <text class="ledger-chip-icon">{{item.type === 'shared' ? '👥' : '📒'}}</text>
+      <text class="ledger-chip-name">{{item.name}}</text>
+    </view>
+  </scroll-view>
+  <view class="ledger-manage" bindtap="goToLedger">管理 ›</view>
+</view>
+
+<!-- 今日概览卡片 -->
+<view class="hero-card">
+  <view class="hero-date">{{todayText}}</view>
+  <view class="hero-summary">
+    <view class="hero-item">
+      <text class="hero-label">今日支出</text>
+      <text class="hero-amount expense">¥{{todayStats._fmtTotalExpense}}</text>
+    </view>
+    <view class="hero-divider"></view>
+    <view class="hero-item">
+      <text class="hero-label">今日收入</text>
+      <text class="hero-amount income">¥{{todayStats._fmtTotalIncome}}</text>
+    </view>
+    <view class="hero-divider"></view>
+    <view class="hero-item">
+      <text class="hero-label">记账笔数</text>
+      <text class="hero-count">{{todayStats.recordCount}}笔</text>
+    </view>
+  </view>
+
+  <!-- 分类占比条 -->
+  <view class="category-bar" wx:if="{{todayStats.categoryBreakdown.length > 0}}">
+    <view
+      wx:for="{{todayStats.categoryBreakdown}}"
+      wx:key="categoryId"
+      class="category-bar-segment"
+      style="flex: {{item.amount}}; background-color: {{getCategoryColor(item.categoryId)}};"
+    ></view>
+  </view>
+
+  <!-- 今日一无所有的空状态 -->
+  <view class="empty-today" wx:if="{{todayStats.recordCount === 0 && !loading}}">
+    <text class="empty-icon">📝</text>
+    <text class="empty-text">今天还没记账哦</text>
+    <text class="empty-hint">点击下方「记账」开始语音记账吧</text>
+  </view>
+</view>
+
+<!-- 语音快捷入口 — 最显眼的操作区 -->
+<view class="voice-quick-entry" bindtap="goToRecord">
+  <view class="voice-btn-outer">
+    <view class="voice-btn-inner">
+      <text class="voice-btn-icon">🎤</text>
+    </view>
+  </view>
+  <text class="voice-btn-label">按住说话，一句话记账</text>
+</view>
+
+<!-- 本月预算进度 -->
+<view class="card budget-card" wx:if="{{budget}}">
+  <view class="card-header flex-between">
+    <text class="card-title">本月预算</text>
+    <text class="card-link" bindtap="goToBudget">设置 ›</text>
+  </view>
+  <view class="budget-bar-info">
+    <text>预算 ¥{{budget.monthlyBudget}}</text>
+    <text class="{{budgetPercent > 80 ? 'expense' : 'income'}}">已用 {{budgetPercent}}%</text>
+  </view>
+  <view class="budget-bar-track">
+    <view
+      class="budget-bar-fill {{budgetPercent > 100 ? 'over' : budgetPercent > 80 ? 'danger' : ''}}"
+      style="width: {{budgetPercent > 100 ? 100 : budgetPercent}}%;"
+    ></view>
+  </view>
+  <view class="budget-bar-detail">
+    <text class="{{budgetRemaining >= 0 ? 'income' : 'expense'}}">
+      {{budgetRemaining >= 0 ? '剩余 ¥' + _fmtBudgetRemaining : '已超支 ¥' + _fmtBudgetOver}}
+    </text>
+    <text class="budget-bar-daily" wx:if="{{budgetRemaining >= 0}}">
+      日均可用 ¥{{_dailyAvailable}}以内
+    </text>
+  </view>
+</view>
+
+<!-- 本月概览 -->
+<view class="card month-card" wx:if="{{monthStats}}">
+  <view class="card-header flex-between">
+    <text class="card-title">{{currentMonth}}月概览</text>
+    <text class="card-link" bindtap="goToStats">查看详情 ›</text>
+  </view>
+  <view class="month-stats-row">
+    <view class="month-stat">
+      <text class="month-stat-value expense">¥{{monthStats._fmtTotalExpense}}</text>
+      <text class="month-stat-label">月支出</text>
+    </view>
+    <view class="month-stat">
+      <text class="month-stat-value income">¥{{monthStats._fmtTotalIncome}}</text>
+      <text class="month-stat-label">月收入</text>
+    </view>
+    <view class="month-stat">
+      <text class="month-stat-value {{monthStats._balanceClass}}">{{monthStats._balanceSign}}¥{{monthStats._fmtBalance}}</text>
+      <text class="month-stat-label">结余</text>
+    </view>
+  </view>
+</view>
+
+<!-- 最近账单 -->
+<view class="card recent-card">
+  <view class="card-header flex-between">
+    <text class="card-title">最近账单</text>
+    <text class="card-link" wx:if="{{recentList.length > 0}}">共{{recentList.length}}笔</text>
+  </view>
+
+  <block wx:if="{{recentList.length > 0}}">
+    <expense-card
+      wx:for="{{recentList}}"
+      wx:key="_id"
+      item="{{item}}"
+      bind:tap="onExpenseTap"
+    />
+  </block>
+
+  <view class="empty-recent" wx:else>
+    <text class="empty-icon">📋</text>
+    <text>暂无账单记录</text>
+  </view>
+</view>
+
+<!-- 底部安全区 -->
+<view class="safe-bottom" style="height: 120rpx;"></view>

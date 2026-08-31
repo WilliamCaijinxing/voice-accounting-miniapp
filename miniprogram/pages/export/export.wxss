@@ -1,0 +1,248 @@
+/* pages/export/export.wxss — 导出页样式 */
+
+.page-container {
+  padding: var(--spacing-md);
+}
+
+/* ============ 顶部区域 ============ */
+.export-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-xl) 0;
+}
+
+.export-hero-icon {
+  font-size: 80rpx;
+  margin-bottom: var(--spacing-sm);
+}
+
+.export-hero-title {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.export-hero-desc {
+  margin-top: 8rpx;
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  text-align: center;
+}
+
+/* ============ 当前导出账本提示 ============ */
+.ledger-tip {
+  display: flex;
+  align-items: center;
+  background: var(--color-primary-soft, rgba(7,193,96,0.12));
+  border-radius: 16rpx;
+  padding: 18rpx 24rpx;
+  margin-bottom: var(--spacing-md);
+}
+.ledger-tip-icon {
+  font-size: 28rpx;
+  margin-right: 10rpx;
+}
+.ledger-tip-text {
+  font-size: var(--font-sm);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* ============ 范围选择 ============ */
+.range-list {
+  margin-top: var(--spacing-sm);
+}
+
+.range-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx var(--spacing-md);
+  border-radius: 16rpx;
+  margin-bottom: 12rpx;
+  background: var(--color-bg-page);
+}
+
+.range-item.active {
+  background: rgba(7, 193, 96, 0.08);
+  border: 2rpx solid #07C160;
+}
+
+.range-item-label {
+  font-size: var(--font-md);
+  color: var(--color-text-primary);
+}
+
+.range-item-check {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #07C160;
+  color: #FFFFFF;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============ 结果 ============ */
+.result-list {
+  margin-top: var(--spacing-sm);
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid var(--color-divider);
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-label {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+}
+
+.result-value {
+  font-size: var(--font-md);
+  font-weight: 600;
+}
+
+.result-value.income { color: var(--color-income); }
+.result-value.expense { color: var(--color-expense); }
+
+/* ============ 按钮 ============ */
+.btn-primary {
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: linear-gradient(135deg, #07C160, #06AD56);
+  color: #FFFFFF;
+  font-size: var(--font-md);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+}
+
+.btn-primary.disabled {
+  opacity: 0.6;
+}
+
+.export-btn {
+  margin-top: var(--spacing-lg);
+}
+
+.result-btn {
+  margin-top: var(--spacing-md);
+  height: 72rpx;
+  font-size: var(--font-sm);
+}
+
+/* ============ 文件获取方式 ============ */
+.file-guide {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: rgba(7, 193, 96, 0.06);
+  border-radius: 16rpx;
+}
+
+.file-guide-title {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8rpx;
+}
+
+.file-guide-text {
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.file-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: var(--spacing-md);
+}
+
+.file-btn {
+  flex: 1;
+  height: 76rpx;
+  border-radius: 38rpx;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-outline {
+  background: #FFFFFF;
+  color: var(--color-primary);
+  border: 2rpx solid var(--color-primary);
+  box-shadow: none;
+}
+
+.file-extra {
+  margin-top: 20rpx;
+  text-align: center;
+}
+
+.file-extra-btn {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  text-decoration: underline;
+}
+
+.file-preparing {
+  margin-top: 16rpx;
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  text-align: center;
+}
+
+.file-path-row {
+  display: flex;
+  align-items: center;
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid var(--color-divider, #eeeeee);
+}
+
+.file-path-label {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  flex-shrink: 0;
+  margin-right: 12rpx;
+}
+
+.file-path {
+  flex: 1;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.file-path-copy {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-size: var(--font-xs);
+  color: var(--color-primary);
+}
+
+.export-note {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: rgba(7, 193, 96, 0.06);
+  border-radius: 16rpx;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
