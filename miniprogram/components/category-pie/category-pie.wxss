@@ -1,0 +1,120 @@
+/* components/category-pie/category-pie.wxss
+   组件样式默认隔离，app.wxss 的全局类不会作用到组件内节点，
+   因此这里自带 .card 的定义（与 app.wxss 保持一致）。 */
+
+.card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin: var(--spacing-sm) var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-card {
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-header {
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1rpx solid var(--color-divider);
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-title {
+  font-size: var(--font-base);
+  font-weight: 600;
+}
+
+/* 饼图（conic-gradient 环形图） */
+.pie-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.pie-chart {
+  width: 220rpx;
+  height: 220rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pie-center {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: var(--color-bg-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pie-total-label {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+.pie-total-amount {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--color-expense);
+}
+
+/* 图例 */
+.pie-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.legend-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 4rpx;
+  flex-shrink: 0;
+}
+
+.legend-name {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+
+.legend-amount {
+  font-size: var(--font-sm);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.legend-pct {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  min-width: 60rpx;
+  text-align: right;
+}
+
+/* 空状态 */
+.empty-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-xl) 0;
+  color: var(--color-text-hint);
+  font-size: var(--font-sm);
+}
+
+.empty-chart .empty-icon {
+  font-size: 48rpx;
+  margin-bottom: 8rpx;
+}

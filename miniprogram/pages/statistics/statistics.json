@@ -1,4 +1,6 @@
 {
-  "usingComponents": {},
+  "usingComponents": {
+    "category-pie": "/components/category-pie/category-pie"
+  },
   "navigationBarTitleText": "统计"
 }

@@ -1,4 +1,7 @@
-<!-- pages/statistics/statistics.wxml — 统计报表页（日/周/月/年） -->
+<!-- pages/statistics/statistics.wxml — 统计报表页（日 / 月 / 年 三维度）
+     原「周」维度已降级为月视图里的「近12周支出」小图，去掉一层嵌套切换；
+     日视图只保留日历（走势图与日历功能重复，已移除）；
+     饼图抽成 category-pie 组件，三个视图共用。 -->
 
 <!-- 当前账本指示（统计只读展示，切换在首页） -->
 <view class="ledger-indicator">
@@ -44,22 +47,10 @@
 
 <!-- ==================== 日视图 ==================== -->
 <block wx:if="{{activeRange === 'day'}}">
-  <!-- 日历 / 走势 合并卡片 -->
+  <!-- 日历卡片 -->
   <view class="card calendar-card">
     <view class="card-header flex-between">
-      <text class="card-title">{{dayViewMode === 'calendar' ? '📅 每日收支' : '📈 每日支出走势'}}</text>
-      <text class="card-hint">{{lineChart ? calTitle : ''}}</text>
-    </view>
-
-    <!-- 子视图切换：看日历 / 看走势 -->
-    <view class="sub-tabs">
-      <view
-        wx:for="{{dayViewTabs}}"
-        wx:key="key"
-        class="sub-tab {{dayViewMode === item.key ? 'active' : ''}}"
-        data-mode="{{item.key}}"
-        bindtap="switchDayView"
-      >{{item.label}}</view>
+      <text class="card-title">📅 每日收支</text>
     </view>
 
     <!-- 月份切换 -->
@@ -69,258 +60,42 @@
       <view class="cal-nav-btn" bindtap="nextCalMonth">›</view>
     </view>
 
-    <!-- ========== 日历模式 ========== -->
-    <block wx:if="{{dayViewMode === 'calendar'}}">
-      <view class="cal-weekdays">
-        <view class="cal-weekday" wx:for="{{calWeekdays}}" wx:key="*this">{{item}}</view>
-      </view>
-
-      <view class="cal-grid">
-        <view
-          wx:for="{{calDays}}"
-          wx:key="key"
-          class="cal-cell {{item.empty ? 'empty' : ''}}"
-          data-date="{{item.date}}"
-          bindtap="tapCalDay"
-        >
-          <block wx:if="{{!item.empty}}">
-            <view class="cal-day-num {{item.isToday ? 'today' : ''}} {{item.hasData ? 'has-data' : ''}}">{{item.day}}</view>
-            <view class="cal-day-amounts">
-              <view class="cal-day-money expense" wx:if="{{item.expense > 0}}">{{item._fmtExpense}}</view>
-              <view class="cal-day-money income" wx:if="{{item.income > 0}}">{{item._fmtIncome}}</view>
-            </view>
-          </block>
-        </view>
-      </view>
-
-      <view class="cal-total">
-        <text class="cal-total-item">本月支出 <text class="expense">¥{{calMonthExpense}}</text></text>
-        <text class="cal-total-item">本月收入 <text class="income">¥{{calMonthIncome}}</text></text>
-      </view>
-
-      <view class="chart-tip">点击日期查看当天账目明细 · ‹ › 切换月份 · 点击月份标题回到今天</view>
-    </block>
-
-    <!-- ========== 走势模式（折线图） ========== -->
-    <block wx:else>
-      <view class="line-chart" wx:if="{{lineChart && lineChart.hasData}}">
-        <!-- Y 轴刻度 -->
-        <view class="line-y-axis" style="height: {{lineChart.totalHeight}}rpx;">
-          <view
-            wx:for="{{lineChart.yLabels}}"
-            wx:key="key"
-            class="line-y-label"
-            style="bottom: {{item.bottom}}rpx;"
-          >{{item._text}}</view>
-        </view>
-
-        <!-- 绘图区（横向可滚动） -->
-        <scroll-view scroll-x class="line-scroll">
-          <view class="line-inner" style="width: {{lineChart.width}}rpx;">
-            <view class="line-plot" style="height: {{lineChart.totalHeight}}rpx;">
-              <!-- 横向网格线 -->
-              <view
-                wx:for="{{lineChart.yLabels}}"
-                wx:key="key"
-                class="line-grid"
-                style="bottom: {{item.bottom}}rpx; width: {{lineChart.width}}rpx;"
-              ></view>
-
-              <!-- 面积填充 -->
-              <view
-                class="line-area"
-                style="height: {{lineChart.plotHeight}}rpx; -webkit-clip-path: {{lineChart.areaPath}}; clip-path: {{lineChart.areaPath}};"
-              ></view>
-
-              <!-- 折线段 -->
-              <view
-                wx:for="{{lineChart.segments}}"
-                wx:key="key"
-                class="line-seg {{item.active ? 'active' : ''}}"
-                style="left: {{item.left}}rpx; bottom: {{item.bottom}}rpx; width: {{item.width}}rpx; transform: rotate({{item.rotate}}deg);"
-              ></view>
-
-              <!-- 数据点 -->
-              <view
-                wx:for="{{lineChart.points}}"
-                wx:key="day"
-                class="line-dot {{item.value > 0 ? 'active' : ''}}"
-                style="left: {{item.dotLeft}}rpx; bottom: {{item.dotBottom}}rpx;"
-                data-date="{{item.date}}"
-                bindtap="tapCalDay"
-              >
-                <view class="line-dot-tip" wx:if="{{item.value > 0}}">{{item._fmt}}</view>
-              </view>
-            </view>
-
-            <!-- X 轴日期 -->
-            <view class="line-x-labels">
-              <view
-                wx:for="{{lineChart.points}}"
-                wx:key="day"
-                class="line-x-label"
-                style="left: {{item.labelLeft}}rpx; width: {{lineChart.colWidth}}rpx;"
-              >{{item.day}}</view>
-            </view>
-          </view>
-        </scroll-view>
-      </view>
-
-      <view class="empty-chart" wx:else>
-        <text class="empty-icon">📈</text>
-        <text>本月暂无支出记录</text>
-      </view>
-
-      <view class="chart-tip" wx:if="{{lineChart && lineChart.hasData}}">← 左右滑动查看整月走势 · 点击圆点看当天明细 →</view>
-    </block>
-  </view>
-
-  <!-- 今日支出分类 -->
-  <view class="card chart-card">
-    <view class="card-header">
-      <text class="card-title">🍩 {{_categoryLabel}}</text>
+    <view class="cal-weekdays">
+      <view class="cal-weekday" wx:for="{{calWeekdays}}" wx:key="*this">{{item}}</view>
     </view>
 
-    <view class="pie-container" wx:if="{{categoryStats.length > 0}}">
-      <view class="pie-chart" style="background: {{_pieGradient}};">
-        <view class="pie-center">
-          <text class="pie-total-label">总支出</text>
-          <text class="pie-total-amount">¥{{_fmtTotalCategory}}</text>
-        </view>
-      </view>
-
-      <view class="pie-legend">
-        <view
-          wx:for="{{categoryStats}}"
-          wx:key="categoryId"
-          class="legend-item"
-        >
-          <view class="legend-dot" style="background-color: {{item._color}};"></view>
-          <text class="legend-name">{{item.categoryName}}</text>
-          <text class="legend-amount">¥{{item._fmtAmount}}</text>
-          <text class="legend-pct">{{item.percentage}}%</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="empty-chart" wx:else>
-      <text class="empty-icon">📊</text>
-      <text>今日暂无支出数据</text>
-    </view>
-  </view>
-</block>
-
-<!-- ==================== 周视图 ==================== -->
-<block wx:if="{{activeRange === 'week'}}">
-  <view class="card chart-card">
-    <view class="card-header flex-between">
-      <text class="card-title">📊 周消费趋势</text>
-    </view>
-
-    <!-- 子视图切换：近12周 / 全年 -->
-    <view class="sub-tabs">
+    <view class="cal-grid">
       <view
-        class="sub-tab {{weekView === 'recent' ? 'active' : ''}}"
-        data-view="recent"
-        bindtap="switchWeekView"
-      >近12周</view>
-      <view
-        class="sub-tab {{weekView === 'year' ? 'active' : ''}}"
-        data-view="year"
-        bindtap="switchWeekView"
-      >全年</view>
-    </view>
-
-    <!-- 全年模式：年份切换 -->
-    <view class="cal-nav" wx:if="{{weekView === 'year'}}">
-      <view class="cal-nav-btn" bindtap="prevWeekYear">‹</view>
-      <view class="cal-nav-title">{{weekYear}}年</view>
-      <view class="cal-nav-btn" bindtap="nextWeekYear">›</view>
-    </view>
-
-    <!-- 近12周柱状图 -->
-    <view class="bar-chart" wx:if="{{weekView === 'recent' && recentWeeks.length > 0}}">
-      <scroll-view scroll-x class="bar-scroll">
-        <view class="bar-container">
-          <view
-            wx:for="{{recentWeeks}}"
-            wx:key="date"
-            class="bar-column"
-          >
-            <view class="bar-value expense" wx:if="{{item.expense > 0}}">
-              <text class="bar-value-text">{{item._fmtExpense}}</text>
-            </view>
-            <view class="bar {{item.expense > 0 ? 'active' : ''}}"
-              style="height: {{item.barHeight}}rpx;">
-            </view>
-            <text class="bar-label">{{item.label}}</text>
+        wx:for="{{calDays}}"
+        wx:key="key"
+        class="cal-cell {{item.empty ? 'empty' : ''}}"
+        data-date="{{item.date}}"
+        bindtap="tapCalDay"
+      >
+        <block wx:if="{{!item.empty}}">
+          <view class="cal-day-num {{item.isToday ? 'today' : ''}} {{item.hasData ? 'has-data' : ''}}">{{item.day}}</view>
+          <view class="cal-day-amounts">
+            <view class="cal-day-money expense" wx:if="{{item.expense > 0}}">{{item._fmtExpense}}</view>
+            <view class="cal-day-money income" wx:if="{{item.income > 0}}">{{item._fmtIncome}}</view>
           </view>
-        </view>
-      </scroll-view>
-      <view class="chart-tip">← 左右滑动查看更多周 →</view>
-    </view>
-
-    <!-- 全年52周柱状图 -->
-    <view class="bar-chart" wx:if="{{weekView === 'year' && yearWeeks.length > 0}}">
-      <scroll-view scroll-x class="bar-scroll">
-        <view class="bar-container bar-container-wide">
-          <view
-            wx:for="{{yearWeeks}}"
-            wx:key="week"
-            class="bar-column bar-column-thin"
-          >
-            <view class="bar-value expense" wx:if="{{item.expense > 0}}">
-              <text class="bar-value-text">{{item._fmtExpense}}</text>
-            </view>
-            <view class="bar {{item.expense > 0 ? 'active' : ''}}"
-              style="height: {{item.barHeight}}rpx;">
-            </view>
-            <text class="bar-label">{{item.label}}</text>
-          </view>
-        </view>
-      </scroll-view>
-      <view class="chart-tip">← 左右滑动查看52周数据 · ‹ › 切换年份 →</view>
-    </view>
-
-    <view class="empty-chart" wx:if="{{(weekView === 'recent' && recentWeeks.length === 0) || (weekView === 'year' && yearWeeks.length === 0)}}">
-      <text class="empty-icon">📊</text>
-      <text>暂无周支出数据</text>
-    </view>
-  </view>
-
-  <!-- 本周支出分类 -->
-  <view class="card chart-card">
-    <view class="card-header">
-      <text class="card-title">🍩 {{_categoryLabel}}</text>
-    </view>
-
-    <view class="pie-container" wx:if="{{categoryStats.length > 0}}">
-      <view class="pie-chart" style="background: {{_pieGradient}};">
-        <view class="pie-center">
-          <text class="pie-total-label">总支出</text>
-          <text class="pie-total-amount">¥{{_fmtTotalCategory}}</text>
-        </view>
-      </view>
-
-      <view class="pie-legend">
-        <view
-          wx:for="{{categoryStats}}"
-          wx:key="categoryId"
-          class="legend-item"
-        >
-          <view class="legend-dot" style="background-color: {{item._color}};"></view>
-          <text class="legend-name">{{item.categoryName}}</text>
-          <text class="legend-amount">¥{{item._fmtAmount}}</text>
-          <text class="legend-pct">{{item.percentage}}%</text>
-        </view>
+        </block>
       </view>
     </view>
 
-    <view class="empty-chart" wx:else>
-      <text class="empty-icon">📊</text>
-      <text>本周暂无支出数据</text>
+    <view class="cal-total">
+      <text class="cal-total-item">本月支出 <text class="expense">¥{{calMonthExpense}}</text></text>
+      <text class="cal-total-item">本月收入 <text class="income">¥{{calMonthIncome}}</text></text>
     </view>
+
+    <view class="chart-tip">点击日期查看当天账目明细 · ‹ › 切换月份 · 点击月份标题回到今天</view>
   </view>
+
+  <category-pie
+    list="{{categoryStats}}"
+    total="{{_fmtTotalCategory}}"
+    label="{{_categoryLabel}}"
+    gradient="{{_pieGradient}}"
+  />
 </block>
 
 <!-- ==================== 月视图 ==================== -->
@@ -366,39 +141,45 @@
     </view>
   </view>
 
-  <!-- 本月支出分类 -->
+  <!-- 近12周支出（原「周」维度降级为月视图内的小图） -->
   <view class="card chart-card">
-    <view class="card-header">
-      <text class="card-title">🍩 {{_categoryLabel}}</text>
+    <view class="card-header flex-between">
+      <text class="card-title">📊 近12周支出</text>
     </view>
 
-    <view class="pie-container" wx:if="{{categoryStats.length > 0}}">
-      <view class="pie-chart" style="background: {{_pieGradient}};">
-        <view class="pie-center">
-          <text class="pie-total-label">总支出</text>
-          <text class="pie-total-amount">¥{{_fmtTotalCategory}}</text>
+    <view class="bar-chart" wx:if="{{recentWeeks.length > 0}}">
+      <scroll-view scroll-x class="bar-scroll">
+        <view class="bar-container">
+          <view
+            wx:for="{{recentWeeks}}"
+            wx:key="date"
+            class="bar-column"
+          >
+            <view class="bar-value expense" wx:if="{{item.expense > 0}}">
+              <text class="bar-value-text">{{item._fmtExpense}}</text>
+            </view>
+            <view class="bar {{item.expense > 0 ? 'active' : ''}}"
+              style="height: {{item.barHeight}}rpx;">
+            </view>
+            <text class="bar-label">{{item.label}}</text>
+          </view>
         </view>
-      </view>
-
-      <view class="pie-legend">
-        <view
-          wx:for="{{categoryStats}}"
-          wx:key="categoryId"
-          class="legend-item"
-        >
-          <view class="legend-dot" style="background-color: {{item._color}};"></view>
-          <text class="legend-name">{{item.categoryName}}</text>
-          <text class="legend-amount">¥{{item._fmtAmount}}</text>
-          <text class="legend-pct">{{item.percentage}}%</text>
-        </view>
-      </view>
+      </scroll-view>
+      <view class="chart-tip">← 左右滑动查看近12周 →</view>
     </view>
 
     <view class="empty-chart" wx:else>
       <text class="empty-icon">📊</text>
-      <text>本月暂无支出数据</text>
+      <text>暂无周支出数据</text>
     </view>
   </view>
+
+  <category-pie
+    list="{{categoryStats}}"
+    total="{{_fmtTotalCategory}}"
+    label="{{_categoryLabel}}"
+    gradient="{{_pieGradient}}"
+  />
 
   <!-- 消费分析建议 -->
   <view class="card advice-card" wx:if="{{advices.length > 0}}">
@@ -469,39 +250,12 @@
     </view>
   </view>
 
-  <!-- 本年支出分类 -->
-  <view class="card chart-card">
-    <view class="card-header">
-      <text class="card-title">🍩 {{_categoryLabel}}</text>
-    </view>
-
-    <view class="pie-container" wx:if="{{categoryStats.length > 0}}">
-      <view class="pie-chart" style="background: {{_pieGradient}};">
-        <view class="pie-center">
-          <text class="pie-total-label">总支出</text>
-          <text class="pie-total-amount">¥{{_fmtTotalCategory}}</text>
-        </view>
-      </view>
-
-      <view class="pie-legend">
-        <view
-          wx:for="{{categoryStats}}"
-          wx:key="categoryId"
-          class="legend-item"
-        >
-          <view class="legend-dot" style="background-color: {{item._color}};"></view>
-          <text class="legend-name">{{item.categoryName}}</text>
-          <text class="legend-amount">¥{{item._fmtAmount}}</text>
-          <text class="legend-pct">{{item.percentage}}%</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="empty-chart" wx:else>
-      <text class="empty-icon">📊</text>
-      <text>本年暂无支出数据</text>
-    </view>
-  </view>
+  <category-pie
+    list="{{categoryStats}}"
+    total="{{_fmtTotalCategory}}"
+    label="{{_categoryLabel}}"
+    gradient="{{_pieGradient}}"
+  />
 </block>
 
 <view class="safe-bottom" style="height: 120rpx;"></view>

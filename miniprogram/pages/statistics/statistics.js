@@ -1,4 +1,5 @@
-// pages/statistics/statistics.js — 统计报表页（日/周/月/年 四维度）
+// pages/statistics/statistics.js — 统计报表页（日 / 月 / 年 三维度）
+// 「周」不再是独立维度，降级为月视图里的「近12周支出」小图，少一层嵌套切换。
 const { formatAmount, getCategoryIcon, formatDate } = require('../../utils/util');
 const { statsAPI, budgetAPI, expenseAPI, currentLedgerId } = require('../../utils/cloud');
 
@@ -6,11 +7,10 @@ const pad = (n) => String(n).padStart(2, '0');
 
 Page({
   data: {
-    // 时间维度切换：日/周/月/年
-    activeRange: 'day',  // day | week | month | year
+    // 时间维度切换：日/月/年
+    activeRange: 'day',  // day | month | year
     rangeTabs: [
       { key: 'day', label: '日' },
-      { key: 'week', label: '周' },
       { key: 'month', label: '月' },
       { key: 'year', label: '年' },
     ],
@@ -23,12 +23,7 @@ Page({
       _balanceClass: 'income', _balanceSign: '+',
     },
 
-    // ============ 日视图：日历 / 走势（同一张卡片切换） ============
-    dayViewMode: 'calendar',   // calendar | trend
-    dayViewTabs: [
-      { key: 'calendar', label: '看日历' },
-      { key: 'trend', label: '看走势' },
-    ],
+    // ============ 日视图：日历（走势图已移除，与日历功能重复） ============
     calYear: new Date().getFullYear(),
     calMonth: new Date().getMonth() + 1,
     calTitle: '',
@@ -36,16 +31,11 @@ Page({
     calDays: [],           // 42 格
     calMonthExpense: '0',  // 当月支出合计（日历底部小结）
     calMonthIncome: '0',   // 当月收入合计
-    lineChart: null,       // 每日支出折线图几何数据（单位 rpx，WXML 直接渲染）
     daySheet: { visible: false, date: '', loading: false, list: [], totalExpense: '0', totalIncome: '0' },
 
-    // ============ 周视图 ============
-    weekView: 'recent',    // recent(近12周) | year(全年52周)
-    weekYear: new Date().getFullYear(),
+    // ============ 近12周（展示在月视图内） ============
     recentWeeks: [],
     maxRecentExpense: 0,
-    yearWeeks: [],
-    maxYearWeekExpense: 0,
 
     // ============ 月视图 ============
     monthOffset: 0,        // 0=最近12个月，1=再往前12个月…
@@ -123,7 +113,7 @@ Page({
     const { activeRange } = this.data;
 
     try {
-      const rangeMap = { day: 'today', week: 'week', month: 'month', year: 'year' };
+      const rangeMap = { day: 'today', month: 'month', year: 'year' };
       const summary = await statsAPI.summary(rangeMap[activeRange], ledgerId);
       const fmtSummary = {
         ...summary,
@@ -136,7 +126,6 @@ Page({
       this.setData({ summary: fmtSummary, loading: false });
 
       if (activeRange === 'day') await this.loadDayView(ledgerId);
-      else if (activeRange === 'week') await this.loadWeekView(ledgerId);
       else if (activeRange === 'month') await this.loadMonthView(ledgerId);
       else if (activeRange === 'year') await this.loadYearView(ledgerId);
     } catch (err) {
@@ -145,20 +134,18 @@ Page({
     }
   },
 
-  // ==================== 日视图：日历/走势（同一卡片切换）+ 分类 ====================
+  // ==================== 日视图：日历 + 分类 ====================
 
   async loadDayView(ledgerId = currentLedgerId()) {
     const { calYear, calMonth } = this.data;
     const todayStr = formatDate(new Date());
 
-    const [cal, trend, catRes] = await Promise.all([
+    const [cal, catRes] = await Promise.all([
       statsAPI.calendar(calYear, calMonth, ledgerId),
-      statsAPI.dailyTrend(calYear, calMonth, ledgerId),
       statsAPI.categoryStats(todayStr, todayStr, 'expense', ledgerId),
     ]);
 
     const days = this.buildCalendarGrid((cal && cal.days) || [], calYear, calMonth);
-    const chart = this.buildLineChart((trend && trend.days) || []);
 
     // 当月收支合计（日历底部小结）
     let monthExpense = 0;
@@ -173,113 +160,11 @@ Page({
     this.setData({
       calTitle: `${calYear}年${calMonth}月`,
       calDays: days,
-      lineChart: chart,
+
       calMonthExpense: formatAmount(monthExpense),
       calMonthIncome: formatAmount(monthIncome),
       ...catData,
     });
-  },
-
-  /** 日视图子模式切换：看日历 / 看走势 */
-  switchDayView(e) {
-    const mode = e.currentTarget.dataset.mode;
-    if (!mode || mode === this.data.dayViewMode) return;
-    this.setData({ dayViewMode: mode });
-  },
-
-  // ==================== 折线图 ====================
-
-  /**
-   * 构建折线图几何数据。
-   * WXML 不能调用函数，所以坐标、角度、长度全部在这里算好。
-   * 统一使用 rpx：旋转角度与长度都基于同一坐标系，换算后视觉一致。
-   */
-  buildLineChart(days) {
-    const list = (days || []).filter(Boolean);
-    if (list.length === 0) return null;
-
-    const COL_W = 56;    // 每天占用宽度（rpx）
-    const PLOT_H = 200;  // 绘图区净高（rpx）
-    const TOP_PAD = 48;  // 顶部留白，给数值气泡留空间（rpx）
-    const DOT = 12;      // 数据点直径（rpx）
-
-    const values = list.map((d) => Number(d.expense) || 0);
-    const hasData = values.some((v) => v > 0);
-    const max = this.niceCeil(Math.max(...values, 0));
-    const totalW = list.length * COL_W;
-
-    const points = list.map((d, i) => {
-      const v = Number(d.expense) || 0;
-      const x = i * COL_W + COL_W / 2;
-      const y = max > 0 ? (v / max) * PLOT_H : 0;
-      return {
-        day: d.day,
-        date: d.date,
-        value: v,
-        x,
-        y,
-        dotLeft: x - DOT / 2,
-        dotBottom: y - DOT / 2,
-        labelLeft: x - COL_W / 2,
-        _fmt: v > 0 ? this.shortenAmount(v) : '',
-      };
-    });
-
-    // 线段：以起点为旋转原点，长度与角度在 rpx 坐标系下计算
-    // 注意 y 轴向上为正，而屏幕/CSS 的 y 轴向下为正，故角度取负
-    const segments = [];
-    for (let i = 0; i < points.length - 1; i += 1) {
-      const a = points[i];
-      const b = points[i + 1];
-      const dx = b.x - a.x;
-      const dyUp = b.y - a.y;
-      segments.push({
-        key: `seg-${i}`,
-        left: a.x,
-        bottom: a.y,
-        width: Math.sqrt(dx * dx + dyUp * dyUp),
-        rotate: (Math.atan2(-dyUp, dx) * 180) / Math.PI,
-        active: a.value > 0 || b.value > 0,
-      });
-    }
-
-    // 面积填充：从折线到绘图区底部闭合（clip-path 百分比坐标）
-    const areaPts = points.map((p) => (
-      `${((p.x / totalW) * 100).toFixed(2)}% ${(100 - (p.y / PLOT_H) * 100).toFixed(2)}%`
-    ));
-    const areaPath = `polygon(0% 100%, ${areaPts.join(', ')}, 100% 100%)`;
-
-    // Y 轴刻度：4 档（0 / 1/3 / 2/3 / 1）
-    const yLabels = [1, 2 / 3, 1 / 3, 0].map((r, idx) => ({
-      key: `y-${idx}`,
-      bottom: r * PLOT_H,
-      _text: this.shortenAmount(Math.round(max * r)),
-    }));
-
-    return {
-      width: totalW,
-      colWidth: COL_W,
-      plotHeight: PLOT_H,
-      topPad: TOP_PAD,
-      totalHeight: PLOT_H + TOP_PAD,
-      max,
-      hasData,
-      points,
-      segments,
-      areaPath,
-      yLabels,
-    };
-  },
-
-  /** 把最大值向上取整到「好看」的刻度（单位：分），避免出现 ¥123.45 这种上限 */
-  niceCeil(max) {
-    if (!max || max <= 0) return 100; // 兜底 1 元，防止除零
-    const steps = [1, 1.1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
-    const exp = Math.floor(Math.log10(max));
-    const base = Math.pow(10, exp);
-    const n = max / base;
-    const step = steps.find((s) => n <= s + 1e-9) || 10;
-    return Math.max(100, Math.round(step * base)); // 最小刻度 1 元
   },
 
   /** 构建 42 格日历网格（周一开头），金额缩略显示 */
@@ -389,70 +274,6 @@ Page({
 
   noop() {},
 
-  // ==================== 周视图 ====================
-
-  async loadWeekView(ledgerId = currentLedgerId()) {
-    const { weekView, weekYear } = this.data;
-
-    // 计算本周日期范围
-    const now = new Date();
-    const dayNum = now.getDay() || 7;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - dayNum + 1);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    const weekStart = formatDate(monday);
-    const weekEnd = formatDate(sunday);
-
-    if (weekView === 'recent') {
-      const [res, catRes] = await Promise.all([
-        statsAPI.trend({ range: 'week', recent: 12, ledgerId }),
-        statsAPI.categoryStats(weekStart, weekEnd, 'expense', ledgerId),
-      ]);
-      const weeks = (res && res.weeks) || [];
-      const max = weeks.reduce((m, w) => Math.max(m, w.expense), 0);
-      const bars = weeks.map((w) => ({
-        ...w,
-        barHeight: w.expense > 0 ? Math.max(8, (w.expense / (max || 1)) * 160) : 4,
-        _fmtExpense: formatAmount(w.expense),
-      }));
-      const catData = this.processCategoryData(catRes, '本周支出分类');
-      this.setData({ recentWeeks: bars, maxRecentExpense: max, ...catData });
-    } else {
-      const [res, catRes] = await Promise.all([
-        statsAPI.trend({ range: 'week', year: weekYear, ledgerId }),
-        statsAPI.categoryStats(weekStart, weekEnd, 'expense', ledgerId),
-      ]);
-      const weeks = (res && res.weeks) || [];
-      const max = weeks.reduce((m, w) => Math.max(m, w.expense), 0);
-      const bars = weeks.map((w) => ({
-        barHeight: w.expense > 0 ? Math.max(6, (w.expense / (max || 1)) * 130) : 3,
-        _fmtExpense: formatAmount(w.expense),
-      }));
-      const catData = this.processCategoryData(catRes, '本周支出分类');
-      this.setData({ yearWeeks: bars, maxYearWeekExpense: max, ...catData });
-    }
-  },
-
-  switchWeekView(e) {
-    const view = e.currentTarget.dataset.view;
-    if (view === this.data.weekView) return;
-    this.setData({ weekView: view });
-    this.loadWeekView();
-  },
-
-  prevWeekYear() {
-    this.setData({ weekYear: this.data.weekYear - 1 });
-    this.loadWeekView();
-  },
-
-  nextWeekYear() {
-    const now = new Date();
-    if (this.data.weekYear >= now.getFullYear()) return;
-    this.setData({ weekYear: this.data.weekYear + 1 });
-    this.loadWeekView();
-  },
-
   // ==================== 月视图：月度趋势 + 分类 + 预算 ====================
 
   async loadMonthView(ledgerId = currentLedgerId()) {
@@ -461,10 +282,11 @@ Page({
     const monthStart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
     const monthEnd = formatDate(now);
 
-    const [trend, monthData, catStats] = await Promise.all([
+    const [trend, monthData, catStats, weekTrend] = await Promise.all([
       statsAPI.trend({ range: 'month', offset: monthOffset, ledgerId }),
       statsAPI.monthly(now.getFullYear(), now.getMonth() + 1, ledgerId),
       statsAPI.categoryStats(monthStart, monthEnd, 'expense', ledgerId),
+      statsAPI.trend({ range: 'week', recent: 12, ledgerId }),
     ]);
 
     const months = (trend && trend.months) || [];
@@ -473,6 +295,15 @@ Page({
       ...x,
       barHeight: x.expense > 0 ? Math.max(8, (x.expense / (max || 1)) * 160) : 4,
       _fmtExpense: formatAmount(x.expense),
+    }));
+
+    // 近12周支出（原「周」维度降级为月视图内的小图）
+    const weeks = (weekTrend && weekTrend.weeks) || [];
+    const weekMax = weeks.reduce((m, w) => Math.max(m, w.expense), 0);
+    const recentWeeks = weeks.map((w) => ({
+      ...w,
+      barHeight: w.expense > 0 ? Math.max(8, (w.expense / (weekMax || 1)) * 160) : 4,
+      _fmtExpense: formatAmount(w.expense),
     }));
 
     const catData = this.processCategoryData(catStats, '本月支出分类');
@@ -488,6 +319,8 @@ Page({
       monthTitle: `${trend.startYm || ''} ~ ${trend.endYm || ''}`,
       monthBars: bars,
       maxMonthExpense: max,
+      recentWeeks,
+      maxRecentExpense: weekMax,
       monthStats: fmtMonthStats,
       ...catData,
     });

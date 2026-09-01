@@ -1,0 +1,34 @@
+<!-- components/category-pie/category-pie.wxml — 支出分类饼图卡片 -->
+
+<view class="card chart-card">
+  <view class="card-header">
+    <text class="card-title">🍩 {{label}}</text>
+  </view>
+
+  <view class="pie-container" wx:if="{{!empty}}">
+    <view class="pie-chart" style="background: {{gradient}};">
+      <view class="pie-center">
+        <text class="pie-total-label">总支出</text>
+        <text class="pie-total-amount">¥{{total}}</text>
+      </view>
+    </view>
+
+    <view class="pie-legend">
+      <view
+        wx:for="{{list}}"
+        wx:key="categoryId"
+        class="legend-item"
+      >
+        <view class="legend-dot" style="background-color: {{item._color}};"></view>
+        <text class="legend-name">{{item.categoryName}}</text>
+        <text class="legend-amount">¥{{item._fmtAmount}}</text>
+        <text class="legend-pct">{{item.percentage}}%</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty-chart" wx:else>
+    <text class="empty-icon">📊</text>
+    <text>{{label}}暂无数据</text>
+  </view>
+</view>
