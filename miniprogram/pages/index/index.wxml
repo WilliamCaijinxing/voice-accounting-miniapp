@@ -1,4 +1,5 @@
-<!-- pages/index/index.wxml — 首页仪表盘 -->
+<!-- pages/index/index.wxml — 首页（语音记账主界面）
+     已合并原「记账页」：录音 → 识别 → 确认 → 保存 全在本页闭环 -->
 
 <!-- 账本切换栏 -->
 <view class="ledger-switch">
@@ -45,60 +46,159 @@
       wx:for="{{todayStats.categoryBreakdown}}"
       wx:key="categoryId"
       class="category-bar-segment"
-      style="flex: {{item.amount}}; background-color: {{getCategoryColor(item.categoryId)}};"
+      style="flex: {{item.amount}}; background-color: {{item._color}};"
     ></view>
   </view>
 
-  <!-- 今日一无所有的空状态 -->
+  <!-- 今天还没记账 -->
   <view class="empty-today" wx:if="{{todayStats.recordCount === 0 && !loading}}">
-    <text class="empty-icon">📝</text>
-    <text class="empty-text">今天还没记账哦</text>
-    <text class="empty-hint">点击下方「记账」开始语音记账吧</text>
+    <text class="empty-text">今天还没记账，按住下面的按钮说一句吧</text>
   </view>
 </view>
 
-<!-- 语音快捷入口 — 最显眼的操作区 -->
-<view class="voice-quick-entry" bindtap="goToRecord">
-  <view class="voice-btn-outer">
-    <view class="voice-btn-inner">
-      <text class="voice-btn-icon">🎤</text>
+<!-- ==================== 语音记账区（页面视觉重心） ==================== -->
+<view class="voice-zone">
+
+  <!-- ---------- idle：大号语音按钮 ---------- -->
+  <block wx:if="{{phase === 'idle'}}">
+    <view
+      class="main-voice-btn"
+      bindtouchstart="startRecord"
+      bindtouchend="stopRecord"
+      bindtouchcancel="stopRecord"
+    >
+      <view class="voice-halo"></view>
+      <view class="voice-halo voice-halo-delay"></view>
+      <view class="voice-core">
+        <text class="voice-icon">🎤</text>
+      </view>
+    </view>
+    <text class="voice-main-hint">按住说话，直接记账</text>
+    <text class="voice-sub-hint">松手自动识别金额和分类</text>
+
+    <view class="voice-extras">
+      <text class="example-line">试试说：午餐35元 · 打车25块 · 工资到账15000</text>
+      <text class="manual-link" bindtap="openManualInput">不想说话？手动记账 ›</text>
+    </view>
+  </block>
+
+  <!-- ---------- recording：波形 + 计时 ---------- -->
+  <block wx:if="{{phase === 'recording'}}">
+    <view class="wave-area">
+      <view class="wave-container">
+        <view
+          class="wave-bar"
+          wx:for="{{waves}}"
+          wx:key="*this"
+          style="animation-delay: {{index * 0.08}}s; height: {{item}}%;"
+        ></view>
+      </view>
+      <text class="wave-timer">{{recordingTime}}s</text>
+    </view>
+    <view
+      class="main-voice-btn active"
+      bindtouchend="stopRecord"
+      bindtouchcancel="stopRecord"
+    >
+      <view class="voice-halo"></view>
+      <view class="voice-halo voice-halo-delay"></view>
+      <view class="voice-core recording">
+        <text class="voice-icon">🔊</text>
+      </view>
+    </view>
+    <text class="voice-main-hint recording">松手结束录音</text>
+  </block>
+
+  <!-- ---------- parsing：识别中 ---------- -->
+  <block wx:if="{{phase === 'parsing'}}">
+    <view class="parsing-area">
+      <view class="parsing-spinner"></view>
+      <text class="voice-main-hint">正在识别...</text>
+      <text class="voice-sub-hint" wx:if="{{rawText}}">{{rawText}}</text>
+    </view>
+  </block>
+
+  <!-- ---------- confirm：确认卡片 ---------- -->
+  <view class="confirm-card" wx:if="{{phase === 'confirm' && parsed}}">
+    <!-- 识别原文 -->
+    <view class="raw-text-line" wx:if="{{rawText}}">
+      <text class="raw-text-label">识别内容：</text>
+      <text class="raw-text">{{rawText}}</text>
+    </view>
+
+    <view class="confirm-amount-row">
+      <text class="confirm-type {{parsed.type === 'income' ? 'income' : 'expense'}}">
+        {{parsed.type === 'income' ? '收入' : '支出'}}
+      </text>
+      <text class="confirm-amount {{parsed.type === 'income' ? 'income' : 'expense'}}">
+        {{parsed._sign}}¥{{parsed._fmtAmount}}
+      </text>
+    </view>
+
+    <!-- 记入哪个账本（只读提示，切换请用顶部账本栏） -->
+    <view class="confirm-ledger-tip">
+      <text class="confirm-ledger-icon">{{currentLedgerId ? '👥' : '📒'}}</text>
+      <text class="confirm-ledger-text">记入「{{currentLedgerName}}」</text>
+    </view>
+
+    <!-- 分类选择 -->
+    <view class="confirm-field">
+      <text class="confirm-field-label">分类</text>
+      <scroll-view class="category-scroll" scroll-x>
+        <view class="category-list">
+          <view
+            wx:for="{{categories}}"
+            wx:key="id"
+            class="category-item {{parsed.categoryId === item.id ? 'selected' : ''}}"
+            data-id="{{item.id}}"
+            data-name="{{item.name}}"
+            bindtap="selectCategory"
+          >
+            <text class="category-icon">{{item.icon}}</text>
+            <text class="category-name">{{item.name}}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 日期 -->
+    <picker mode="date" value="{{parsed.date}}" start="2020-01-01" end="{{todayStr}}" bindchange="onDateChange">
+      <view class="confirm-field flex-between">
+        <text class="confirm-field-label">日期</text>
+        <view class="confirm-field-value flex-row">
+          <text>{{parsed.date}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </view>
+    </picker>
+
+    <!-- 备注 -->
+    <view class="confirm-field">
+      <text class="confirm-field-label">备注</text>
+      <input
+        class="confirm-input"
+        value="{{parsed.description}}"
+        placeholder="添加备注..."
+        bindinput="onDescInput"
+      />
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="confirm-actions">
+      <button class="btn-cancel" bindtap="resetRecord">重新录入</button>
+      <button class="btn-save" bindtap="saveExpense">确认保存</button>
     </view>
   </view>
-  <text class="voice-btn-label">按住说话，一句话记账</text>
+
 </view>
 
-<!-- 本月预算进度 -->
-<view class="card budget-card" wx:if="{{budget}}">
-  <view class="card-header flex-between">
-    <text class="card-title">本月预算</text>
-    <text class="card-link" bindtap="goToBudget">设置 ›</text>
-  </view>
-  <view class="budget-bar-info">
-    <text>预算 ¥{{budget.monthlyBudget}}</text>
-    <text class="{{budgetPercent > 80 ? 'expense' : 'income'}}">已用 {{budgetPercent}}%</text>
-  </view>
-  <view class="budget-bar-track">
-    <view
-      class="budget-bar-fill {{budgetPercent > 100 ? 'over' : budgetPercent > 80 ? 'danger' : ''}}"
-      style="width: {{budgetPercent > 100 ? 100 : budgetPercent}}%;"
-    ></view>
-  </view>
-  <view class="budget-bar-detail">
-    <text class="{{budgetRemaining >= 0 ? 'income' : 'expense'}}">
-      {{budgetRemaining >= 0 ? '剩余 ¥' + _fmtBudgetRemaining : '已超支 ¥' + _fmtBudgetOver}}
-    </text>
-    <text class="budget-bar-daily" wx:if="{{budgetRemaining >= 0}}">
-      日均可用 ¥{{_dailyAvailable}}以内
-    </text>
-  </view>
-</view>
-
-<!-- 本月概览 -->
+<!-- 本月账本卡（原「预算卡」+「月概览卡」合并） -->
 <view class="card month-card" wx:if="{{monthStats}}">
   <view class="card-header flex-between">
-    <text class="card-title">{{currentMonth}}月概览</text>
+    <text class="card-title">{{currentMonth}}月账本</text>
     <text class="card-link" bindtap="goToStats">查看详情 ›</text>
   </view>
+
   <view class="month-stats-row">
     <view class="month-stat">
       <text class="month-stat-value expense">¥{{monthStats._fmtTotalExpense}}</text>
@@ -112,6 +212,33 @@
       <text class="month-stat-value {{monthStats._balanceClass}}">{{monthStats._balanceSign}}¥{{monthStats._fmtBalance}}</text>
       <text class="month-stat-label">结余</text>
     </view>
+  </view>
+
+  <!-- 预算进度 -->
+  <view class="budget-section" wx:if="{{budget}}">
+    <view class="budget-bar-info">
+      <text>本月预算 ¥{{budget.monthlyBudget}}</text>
+      <text class="{{budgetPercent > 80 ? 'expense' : 'income'}}">已用 {{budgetPercent}}%</text>
+    </view>
+    <view class="budget-bar-track">
+      <view
+        class="budget-bar-fill {{budgetPercent > 100 ? 'over' : budgetPercent > 80 ? 'danger' : ''}}"
+        style="width: {{budgetPercent > 100 ? 100 : budgetPercent}}%;"
+      ></view>
+    </view>
+    <view class="budget-bar-detail">
+      <text class="{{budgetRemaining >= 0 ? 'income' : 'expense'}}">
+        {{budgetRemaining >= 0 ? '剩余 ¥' + _fmtBudgetRemaining : '已超支 ¥' + _fmtBudgetOver}}
+      </text>
+      <text class="budget-bar-daily" wx:if="{{budgetRemaining >= 0}}">
+        日均可用 ¥{{_dailyAvailable}}以内
+      </text>
+    </view>
+    <text class="budget-setting-link" bindtap="goToBudget">设置预算 ›</text>
+  </view>
+
+  <view class="no-budget" wx:else>
+    <text class="card-link" bindtap="goToBudget">设置本月预算 ›</text>
   </view>
 </view>
 
