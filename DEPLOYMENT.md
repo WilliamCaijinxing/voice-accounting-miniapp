@@ -170,7 +170,7 @@ wx.cloud.init({
 
 ## 第四步：部署云函数
 
-项目共有 **9 个云函数**需要部署：
+项目共有 **8 个云函数**需要部署：
 
 ```
 cloudfunctions/
@@ -184,19 +184,25 @@ cloudfunctions/
 └── exportData/     ← 账本导出（生成 CSV 上传云存储）
 ```
 
+> **账本访问守卫（ledger-guard）说明**：`expenseCRUD` / `statistics` / `budgetCRUD` / `exportData`
+> 四个云函数目录内各有一份 `ledger-guard.js`（共享账本成员校验 + ledgerId 类型白名单，来源见
+> `cloudfunctions/_shared/ledger-guard.js`）。微信云函数按目录独立上传、无法跨目录 require，
+> 因此该守卫**必须与所在云函数一起上传部署**。若修改守卫逻辑，请先执行：
+> `cd cloudfunctions && node sync-ledger-guard.js`，再重新上传这 4 个云函数。
+
 ### 部署步骤（每个云函数重复一次）
 
 1. 在开发者工具左侧文件树中，展开 `cloudfunctions/` 目录
 2. **右键**点击云函数文件夹（如 `userLogin`）
 3. 选择 **「上传并部署：云端安装依赖」**
 4. 等待上传完成（控制台会显示 `上传成功` 提示）
-5. 对其余 8 个云函数重复上述操作
+5. 对其余 7 个云函数重复上述操作
 
 > 首次部署每个云函数约需 30-60 秒（云端安装依赖）。`voiceToText` 云函数需要安装 `tencentcloud-sdk-nodejs`，首次部署可能需要 1-2 分钟。
 
 ### 验证云函数
 
-部署完成后，在「云开发控制台 → 云函数」中应看到 9 个函数，状态均为「已部署」。
+部署完成后，在「云开发控制台 → 云函数」中应看到 8 个函数，状态均为「已部署」。
 
 ---
 
