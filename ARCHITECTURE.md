@@ -46,7 +46,6 @@ voice-accounting-miniapp/
     ├── parseVoice/               # NLP 解析：语音文本 → {金额, 分类, 日期, 描述}
     ├── expenseCRUD/              # 账目增删改查 + 分页
     ├── statistics/               # 聚合统计：今日/月度/分类/趋势
-    ├── voiceASR/                 # 语音识别降级方案（腾讯云 ASR）
     └── userLogin/                # 静默登录
 ```
 

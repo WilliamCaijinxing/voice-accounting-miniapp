@@ -31,7 +31,6 @@ voice-accounting-miniapp/
 │   ├── statistics/         # 统计聚合
 │   ├── parseVoice/         # 语音文本解析为结构化账目
 │   ├── voiceToText/        # 音频转文本 + 解析（含预热优化）
-│   ├── voiceASR/           # 腾讯云语音识别
 │   ├── exportData/         # 导出 CSV
 │   ├── groupCRUD/          # 多人账本
 │   └── userLogin/          # 登录

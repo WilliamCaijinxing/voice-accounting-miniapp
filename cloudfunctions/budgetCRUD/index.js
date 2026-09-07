@@ -5,10 +5,17 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const _ = db.command;
+const { guardLedgerAccess } = require('./ledger-guard');
 
 exports.main = async (event) => {
   const { action } = event;
   const { OPENID } = cloud.getWXContext();
+
+  // 统一入口守卫：预算读写均按 ledgerId 隔离，非成员访问与注入型 ledgerId 在此拦截
+  if (event.ledgerId) {
+    const guard = await guardLedgerAccess(event.ledgerId, OPENID);
+    if (guard.code !== 0) return guard;
+  }
 
   switch (action) {
     case 'get': return getBudget(OPENID, event);
@@ -85,6 +92,14 @@ async function setBudget(openid, event) {
   // 金额以"元"传入，内部统一存储为分
   const monthlyAmount = event.monthlyBudget !== undefined ? Math.round(Number(event.monthlyBudget) * 100) : null;
   const yearlyAmount = event.yearBudget !== undefined ? Math.round(Number(event.yearBudget) * 100) : null;
+
+  // 金额合法性：必须为非负有限数，拒绝 NaN/负数/超大值
+  if (monthlyAmount !== null && (!Number.isFinite(monthlyAmount) || monthlyAmount < 0)) {
+    return { code: -1, message: '月度预算金额不合法' };
+  }
+  if (yearlyAmount !== null && (!Number.isFinite(yearlyAmount) || yearlyAmount < 0)) {
+    return { code: -1, message: '年度预算金额不合法' };
+  }
 
   try {
     const results = {};

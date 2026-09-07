@@ -8,10 +8,19 @@ const _ = db.command;
 const $ = db.command.aggregate;
 const EXPENSE_COLL = 'expenses';
 const LEDGER_COLL = 'ledgers';
+const { guardLedgerAccess } = require('./ledger-guard');
 
 exports.main = async (event) => {
   const { action } = event;
   const { OPENID } = cloud.getWXContext();
+
+  // 统一入口守卫：涉共享账本的调用必须通过成员校验，
+  // 且 ledgerId 须为合法 24 位 hex（阻断 NoSQL 操作符注入，如 {$ne:null}）。
+  // 个人账本（未传 ledgerId）自动放行。
+  if (event.ledgerId) {
+    const guard = await guardLedgerAccess(event.ledgerId, OPENID);
+    if (guard.code !== 0) return guard;
+  }
 
   switch (action) {
     case 'create': return createExpense(OPENID, event);

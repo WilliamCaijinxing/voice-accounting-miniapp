@@ -5,6 +5,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const MAX_LIMIT = 100; // 单次查询上限
+const { guardLedgerAccess } = require('./ledger-guard');
 
 /**
  * CSV 转义：字段中含逗号/引号/换行时需要加引号
@@ -64,6 +65,12 @@ exports.main = async (event) => {
 
   if (action !== 'exportCSV') {
     return { code: -1, message: 'Unknown action' };
+  }
+
+  // 共享账本导出前必须校验成员身份（防止拖走他人账本数据），个人账本自动放行
+  if (ledgerId) {
+    const guard = await guardLedgerAccess(ledgerId, OPENID);
+    if (guard.code !== 0) return guard;
   }
 
   try {

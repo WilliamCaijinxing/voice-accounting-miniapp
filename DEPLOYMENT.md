@@ -178,7 +178,6 @@ cloudfunctions/
 ├── parseVoice/     ← NLP 语音文本解析
 ├── expenseCRUD/    ← 账目增删改查（支持 ledgerId 多账本隔离）
 ├── statistics/     ← 统计聚合（日历 + 日/周/月/年趋势，支持 ledgerId）
-├── voiceASR/       ← 语音识别（备用方案）
 ├── voiceToText/    ← 腾讯云语音识别（推荐，ASR+NLP 一体化：录音 base64 直传，一次调用返回结构化账目）
 ├── budgetCRUD/     ← 预算管理（设置/查询月度年度预算，支持 ledgerId）
 ├── groupCRUD/      ← 共享账本管理（创建/加入/成员/邀请码/退出/移除/解散）

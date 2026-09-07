@@ -6,10 +6,18 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 const $ = db.command.aggregate;
+const { guardLedgerAccess } = require('./ledger-guard');
 
 exports.main = async (event) => {
   const { action } = event;
   const { OPENID } = cloud.getWXContext();
+
+  // 统一入口守卫：statistics 全部 action 共享同一数据源（expenses by ledgerId），
+  // 在此统一拦截非成员的共享账本访问 + ledgerId 类型注入（个人账本自动放行）。
+  if (event.ledgerId) {
+    const guard = await guardLedgerAccess(event.ledgerId, OPENID);
+    if (guard.code !== 0) return guard;
+  }
 
   switch (action) {
     case 'today': return getTodayStats(OPENID, event);
