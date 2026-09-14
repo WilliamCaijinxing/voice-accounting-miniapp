@@ -1,10 +1,13 @@
 // app.js - 语音记账小程序入口
+const { CLOUD_ENV } = require('./config');
+
 App({
   onLaunch() {
     // 初始化云开发
     if (wx.cloud) {
       wx.cloud.init({
-        env: 'cloud1-d5gk2s5v9147776de', // 替换为你的云环境ID
+        // 环境 ID 统一在 config.js 里维护，避免散落各处
+        env: CLOUD_ENV,
         traceUser: true,
       });
     }

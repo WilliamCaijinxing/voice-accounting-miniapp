@@ -258,7 +258,8 @@
 <view class="card recent-card">
   <view class="card-header flex-between">
     <text class="card-title">最近账单</text>
-    <text class="card-link" wx:if="{{recentList.length > 0}}">共{{recentList.length}}笔</text>
+    <!-- 总数取自服务端 count；此处列表只展示最近 10 条，不能用 recentList.length 当总数 -->
+    <text class="card-link" wx:if="{{recentTotal > 0}}">共{{recentTotal}}笔</text>
   </view>
 
   <block wx:if="{{recentList.length > 0}}">

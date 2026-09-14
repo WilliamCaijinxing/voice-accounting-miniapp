@@ -68,7 +68,7 @@
       <text class="menu-icon">📊</text>
       <view class="menu-body">
         <text class="menu-title">消费统计</text>
-        <text class="menu-desc">日/周/月/年多维报表与趋势</text>
+        <text class="menu-desc">日/月/年多维报表与趋势</text>
       </view>
       <text class="menu-arrow">›</text>
     </view>

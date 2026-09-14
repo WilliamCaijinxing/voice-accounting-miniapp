@@ -437,6 +437,7 @@ exports.main = async (event) => {
     };
   } catch (err) {
     console.error('Parse voice error:', err);
-    return { code: -1, message: '解析失败：' + err.message };
+    // 不回传原始报错文本（P1-18）：完整错误以上面的 console.error 落到云函数日志
+    return { code: -1, message: '解析失败，请重试', error: 'PARSE_FAILED' };
   }
 };

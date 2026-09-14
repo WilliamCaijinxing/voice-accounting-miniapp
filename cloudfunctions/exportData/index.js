@@ -171,6 +171,7 @@ exports.main = async (event) => {
     };
   } catch (err) {
     console.error('[exportData] Error:', err);
-    return { code: -1, message: '导出失败：' + (err.message || '未知错误') };
+    // 不回传原始报错文本（P1-18）：完整错误已由上面的 console.error 落到云函数日志
+    return { code: -1, message: '导出失败，请重试', error: 'EXPORT_FAILED' };
   }
 };

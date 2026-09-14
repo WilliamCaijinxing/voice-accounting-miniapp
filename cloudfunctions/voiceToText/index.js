@@ -498,7 +498,9 @@ exports.main = async (event) => {
     const asrStart = Date.now();
     const asrResult = await recognizeWithTencentASR(base64Data, dataLen);
     console.log('[voiceToText] ASR 耗时:', Date.now() - asrStart, 'ms, dataLen:', dataLen);
-    console.log('[voiceToText] ASR 返回:', JSON.stringify(asrResult).substring(0, 300));
+    // 只打响应体长度，不打内容：ASR 返回的就是用户的语音转写原文，
+    // 属于个人财务信息，不应落到云函数日志里（P1-14）。
+    console.log('[voiceToText] ASR 返回, 响应体长度:', JSON.stringify(asrResult || {}).length);
 
     // 4. 提取识别文本
     const text = (asrResult.Result || asrResult.result || '').trim();
@@ -546,10 +548,12 @@ exports.main = async (event) => {
         error: 'RateLimit',
       };
     }
+    // 不回传云服务原始报错文本（P1-18）：里面可能带接口名、账号、配额等内部细节，
+    // 用户既看不懂也不该看到。完整错误已由上面的 console.error 落到云函数日志。
     return {
       code: -1,
-      message: '语音识别失败：' + (err.message || '未知错误'),
-      error: err.message,
+      message: '语音识别失败，请重试',
+      error: 'ASR_FAILED',
     };
   }
 };

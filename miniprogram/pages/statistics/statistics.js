@@ -53,7 +53,7 @@ Page({
     totalCategoryExpense: 0,
     _fmtTotalCategory: '0',
     _pieGradient: '',           // conic-gradient 内联样式字符串
-    _categoryLabel: '支出分类',  // 卡片标题（今日/本周/本月/本年）
+    _categoryLabel: '支出分类',  // 卡片标题（日视图为「今日」，月/年视图为该区间）
 
     // ============ 月维度：预算 ============
     monthStats: { totalExpense: 0, totalIncome: 0, recordCount: 0, daysWithRecords: 0, avgDailyExpense: 0, balance: 0 },

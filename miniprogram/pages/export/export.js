@@ -13,6 +13,8 @@ Page({
     exporting: false,
     result: null,
     currentLedgerName: '我的账本',
+    // 本次导出的文件名（JS 侧预计算，WXML 只取值）
+    fileName: '',
 
     // 文件获取方式（解决"导出的文件不知道在哪"）
     localPath: '',   // 小程序本地路径（供转发到微信）
@@ -56,6 +58,39 @@ Page({
     }
   },
 
+  /**
+   * 生成导出文件名：账本名 + 区间标识（+ 导出日）。
+   * 此前固定为「<账本名>_账单.csv」，换个区间再导出就与上一次同名，
+   * 转发到微信后两个文件难以区分、落盘还会互相覆盖。
+   * 规则：有明确区间的用区间标识（同名即同区间，重复导出可预期地替换）；
+   *      「全部账单」没有区间标识、且内容会随新记账不断变化，故补导出日避免覆盖。
+   */
+  buildFileName(rangeKey, ledgerName) {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+    // 账本名是用户自定义的，去掉文件系统与分享接口不接受的字符
+    const safeName = String(ledgerName || '我的账本').replace(/[\\/:*?"<>|\s]/g, '');
+
+    let period;
+    switch (rangeKey) {
+      case 'thisMonth':
+        period = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+        break;
+      case 'lastMonth': {
+        const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        period = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+        break;
+      }
+      case 'thisYear':
+        period = `${now.getFullYear()}年`;
+        break;
+      default:
+        period = `全部_${stamp}`;
+    }
+    return `${safeName}_账单_${period}.csv`;
+  },
+
   async doExport() {
     if (this.data.exporting) return;
     const ledgerId = currentLedgerId();
@@ -63,6 +98,7 @@ Page({
     this.setData({
       exporting: true, result: null, currentLedgerName: ledger.name,
       localPath: '', tempUrl: '',
+      fileName: this.buildFileName(this.data.activeRange, ledger.name),
     });
 
     wx.showLoading({ title: '正在导出...', mask: true });
@@ -143,7 +179,8 @@ Page({
     }
     wx.shareFileMessage({
       filePath,
-      fileName: `${this.data.currentLedgerName || '我的账本'}_账单.csv`,
+      // 用导出时算好的带区间文件名，避免不同区间的导出在微信里同名互相覆盖
+      fileName: this.data.fileName || `${this.data.currentLedgerName || '我的账本'}_账单.csv`,
       success: () => {},
       fail: (err) => {
         console.error('shareFileMessage fail:', err);

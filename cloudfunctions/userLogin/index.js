@@ -58,7 +58,9 @@ exports.main = async (event) => {
     return { code: -1, message: 'Unknown action: ' + action };
   } catch (err) {
     console.error('Login error:', err);
-    return { code: -1, message: '登录失败', error: err.message };
+    // 不回传 err.message（P1-18）：数据库原始报错会暴露集合名/字段等内部结构。
+    // 完整错误已由上面的 console.error 落到云函数日志。
+    return { code: -1, message: '登录失败，请重试', error: 'LOGIN_FAILED' };
   }
 };
 

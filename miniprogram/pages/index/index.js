@@ -17,6 +17,8 @@ Page({
     todayStats: { totalExpense: 0, totalIncome: 0, recordCount: 0, categoryBreakdown: [] },
     monthStats: null,
     recentList: [],
+    // 最近账单的真实总数（recentList 只取前 10 条，不能用 length 当总数）
+    recentTotal: 0,
     todayText: '',
     currentMonth: new Date().getMonth() + 1,
     loading: true,
@@ -147,6 +149,8 @@ Page({
       const today = todayData || { totalExpense: 0, totalIncome: 0, recordCount: 0, categoryBreakdown: [] };
       const month = monthData || { totalExpense: 0, totalIncome: 0, recordCount: 0, daysWithRecords: 0, avgDailyExpense: 0, balance: 0 };
       const list = (recentData && recentData.list) || [];
+      // 总数取自服务端 count；缺失时退回本页条数，至少不显示成 0
+      const total = (recentData && typeof recentData.total === 'number') ? recentData.total : list.length;
 
       // 构建记账人昵称映射（仅共享账本需要显示"谁记的"）
       let openidMap = {};
@@ -188,6 +192,7 @@ Page({
           _sign: item.type === 'income' ? '+' : '-',
           recorderName: ledger.type === 'shared' ? (openidMap[item._openid] || '成员') : '',
         })),
+        recentTotal: total,
         loading: false,
       });
 
@@ -446,7 +451,9 @@ Page({
       const result = asrResult || {};
       // 耗时埋点：定位慢在哪个环节（读文件 / 云函数识别）
       console.log(`[Index][perf] 读音频 ${t1 - t0}ms | 识别+解析 ${t2 - t1}ms | 总计 ${t2 - t0}ms`);
-      console.log('[Index] voiceToText result:', JSON.stringify(result));
+      // 只打结构与长度，不打 result 全文：里面的 text 是用户语音转写原文，
+      // 属于个人财务信息，不该出现在客户端日志里（P1-14）
+      console.log(`[Index] voiceToText 返回：code=${result.code} textLen=${(result.text || '').length} fallback=${!!result.fallback}`);
 
       // ---- ASR 服务未配置，走降级引导 ----
       if (result.fallback) {
