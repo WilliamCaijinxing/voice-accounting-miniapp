@@ -64,6 +64,9 @@ Page({
     advices: [],
 
     loading: true,
+    // 本次刷新是否失败。失败时必须显式告知：此前异常被 catch 后只打日志，
+    // 页面继续显示上一轮数据，用户看到的是「静默过期的数字」
+    loadError: false,
 
     // 当前统计所属账本（反映全局选择的账本）
     currentLedgerName: '我的账本',
@@ -120,7 +123,7 @@ Page({
     const range = e.currentTarget.dataset.range;
     if (range === this.data.activeRange) return;
     this.setData({ activeRange: range });
-    this.loadAll();
+    this.loadAll().catch((err) => this.handleLoadError(err));
   },
 
   // ==================== 总加载 ====================
@@ -129,7 +132,7 @@ Page({
     // 未显式传入 seq（如切换「日/月/年」标签）时另起一轮，作废在途的旧请求
     if (seq === undefined) seq = (this._dataSeq = (this._dataSeq || 0) + 1);
 
-    this.setData({ loading: true });
+    this.setData({ loading: true, loadError: false });
     const { activeRange } = this.data;
 
     try {
@@ -137,13 +140,20 @@ Page({
       const summary = await statsAPI.summary(rangeMap[activeRange], ledgerId);
       if (seq !== this._dataSeq) return; // 已切换维度或账本，旧结果丢弃
 
+      // 云函数成功返回但数据为空：视为本次加载失败。
+      // 此前直接对 null 取属性会抛 TypeError，被下面 catch 后静默保留上一轮数据。
+      if (!summary) {
+        this.setData({ loading: false, loadError: true });
+        return;
+      }
+
       const fmtSummary = {
         ...summary,
         _fmtTotalExpense: formatAmount(summary.totalExpense),
         _fmtTotalIncome: formatAmount(summary.totalIncome),
-        _fmtBalance: formatAmount(Math.abs(summary.balance)),
-        _balanceClass: summary.balance >= 0 ? 'income' : 'expense',
-        _balanceSign: summary.balance >= 0 ? '+' : '-',
+        _fmtBalance: formatAmount(Math.abs(summary.balance || 0)),
+        _balanceClass: (summary.balance || 0) >= 0 ? 'income' : 'expense',
+        _balanceSign: (summary.balance || 0) >= 0 ? '+' : '-',
       };
       this.setData({ summary: fmtSummary, loading: false });
 
@@ -153,8 +163,27 @@ Page({
     } catch (err) {
       if (seq !== this._dataSeq) return;
       console.error('Stats load error:', err);
-      this.setData({ loading: false });
+      // 不再静默停在旧数据：明确告知本次刷新失败，并给出重试入口
+      this.setData({ loading: false, loadError: true });
     }
+  },
+
+  // ==================== 加载失败与重试 ====================
+
+  /**
+   * 局部刷新失败的统一出口。
+   * 翻月份 / 翻日历这类操作是「直接调用」加载方法的，此前没有 catch，
+   * 一旦失败就是未捕获的 Promise 拒绝 + 页面看不出任何异常。
+   */
+  handleLoadError(err) {
+    console.error('[Statistics] 刷新失败:', err);
+    this.setData({ loading: false, loadError: true });
+  },
+
+  /** 错误条上的重试按钮：走一遍完整加载，成功后错误态自动清除 */
+  retryLoad() {
+    this.setData({ loadError: false });
+    this.init();
   },
 
   // ==================== 日视图：日历 + 分类 ====================
@@ -248,7 +277,7 @@ Page({
     calMonth -= 1;
     if (calMonth < 1) { calMonth = 12; calYear -= 1; }
     this.setData({ calYear, calMonth });
-    this.loadDayView();
+    this.loadDayView().catch((err) => this.handleLoadError(err));
   },
 
   nextCalMonth() {
@@ -258,13 +287,13 @@ Page({
     calMonth += 1;
     if (calMonth > 12) { calMonth = 1; calYear += 1; }
     this.setData({ calYear, calMonth });
-    this.loadDayView();
+    this.loadDayView().catch((err) => this.handleLoadError(err));
   },
 
   backToToday() {
     const now = new Date();
     this.setData({ calYear: now.getFullYear(), calMonth: now.getMonth() + 1 });
-    this.loadDayView();
+    this.loadDayView().catch((err) => this.handleLoadError(err));
   },
 
   /** 点击日历某天 → 当天明细弹窗 */
@@ -336,17 +365,18 @@ Page({
       _fmtExpense: formatAmount(w.expense),
     }));
 
+    // 空响应兜底：云函数返回 null 时按空数据处理，不让 null 进入后续取属性的路径
     const catData = this.processCategoryData(catStats, '本月支出分类');
 
     const fmtMonthStats = {
-      ...monthData,
-      _fmtTotalExpense: formatAmount(monthData.totalExpense),
-      _fmtTotalIncome: formatAmount(monthData.totalIncome),
-      _fmtAvgDaily: formatAmount(monthData.avgDailyExpense),
+      ...(monthData || {}),
+      _fmtTotalExpense: formatAmount((monthData || {}).totalExpense),
+      _fmtTotalIncome: formatAmount((monthData || {}).totalIncome),
+      _fmtAvgDaily: formatAmount((monthData || {}).avgDailyExpense),
     };
 
     this.setData({
-      monthTitle: `${trend.startYm || ''} ~ ${trend.endYm || ''}`,
+      monthTitle: `${(trend && trend.startYm) || ''} ~ ${(trend && trend.endYm) || ''}`,
       monthBars: bars,
       maxMonthExpense: max,
       recentWeeks,
@@ -358,13 +388,13 @@ Page({
 
   prevMonthPage() {
     this.setData({ monthOffset: this.data.monthOffset + 1 });
-    this.loadMonthView();
+    this.loadMonthView().catch((err) => this.handleLoadError(err));
   },
 
   nextMonthPage() {
     if (this.data.monthOffset <= 0) return;
     this.setData({ monthOffset: this.data.monthOffset - 1 });
-    this.loadMonthView();
+    this.loadMonthView().catch((err) => this.handleLoadError(err));
   },
 
   /** 点击月份柱子 → 该月分类弹窗 */

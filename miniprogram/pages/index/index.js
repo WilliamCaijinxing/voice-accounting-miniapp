@@ -22,6 +22,8 @@ Page({
     todayText: '',
     currentMonth: new Date().getMonth() + 1,
     loading: true,
+    // 本次刷新是否失败（网络异常时不再静默停留在旧数据，见 loadData 的 catch）
+    loadError: false,
 
     // 预算
     budget: null,
@@ -134,7 +136,7 @@ Page({
     // 否则慢返回的旧账本数据会覆盖新账本（页面显示与当前账本不一致）
     const seq = (this._dataSeq = (this._dataSeq || 0) + 1);
 
-    this.setData({ loading: true });
+    this.setData({ loading: true, loadError: false });
     const app = getApp();
     const ledger = app.getCurrentLedger();
     const ledgerId = ledger.id || '';
@@ -201,8 +203,15 @@ Page({
     } catch (err) {
       if (seq !== this._dataSeq) return;
       console.error('[Index] loadData error:', err);
-      this.setData({ loading: false });
+      // 不再静默停在旧数据：明确告知本次刷新失败，并给出重试入口
+      this.setData({ loading: false, loadError: true });
     }
+  },
+
+  /** 错误条上的重试：重新拉一轮首页数据 */
+  retryLoad() {
+    this.setData({ loadError: false });
+    this.refresh();
   },
 
   // 加载预算信息（共享账本传入 ledgerId）

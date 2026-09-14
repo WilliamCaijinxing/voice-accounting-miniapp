@@ -21,6 +21,12 @@
   >{{item.label}}</view>
 </view>
 
+<!-- 刷新失败提示：异常此前只打日志，页面继续显示上一轮数据，用户无从察觉 -->
+<view class="load-error" wx:if="{{loadError}}">
+  <text class="load-error-text">刷新失败，当前显示的可能不是最新数据</text>
+  <text class="load-error-retry" bindtap="retryLoad">重试</text>
+</view>
+
 <!-- 多维度汇总 -->
 <view class="card stats-summary">
   <view class="summary-row">

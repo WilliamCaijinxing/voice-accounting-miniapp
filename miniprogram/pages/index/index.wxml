@@ -20,6 +20,12 @@
   <view class="ledger-manage" bindtap="goToLedger">管理 ›</view>
 </view>
 
+<!-- 刷新失败提示：放在数据之前，异常时先看到「这不是最新的」再看到数字 -->
+<view class="load-error" wx:if="{{loadError}}">
+  <text class="load-error-text">刷新失败，当前显示的可能不是最新数据</text>
+  <text class="load-error-retry" bindtap="retryLoad">重试</text>
+</view>
+
 <!-- 今日概览卡片 -->
 <view class="hero-card">
   <view class="hero-date">{{todayText}}</view>
