@@ -132,18 +132,38 @@ Page({
       displayName: m.nickname || (m.openid === detail.ownerOpenid ? '创建者' : '成员'),
       isOwner: m.openid === detail.ownerOpenid,
     }));
+    const isOwner = detail.isOwner === true;
+    const used = detail.inviteCodeUsed === true;
+    // 有码、没用掉、没过期，才算可用
+    const usable = !!detail.inviteCode && !used
+      && Number(detail.inviteCodeExpireAt) > Date.now();
+
+    // 提示文案在 JS 侧定稿（含角色差异：只有创建者能点「重置」，
+    // 成员看到「点重置」却点不到按钮会很困惑）
+    let tip = '';
+    let tipWarn = false;
+    if (usable) {
+      tip = `一次性邀请码 · 有效期至 ${this.formatExpire(detail.inviteCodeExpireAt)}`;
+    } else if (used) {
+      tip = isOwner
+        ? '该邀请码已被使用，点「重置」可生成新的'
+        : '该邀请码已被使用，请让创建者重置后再邀请';
+      tipWarn = true;
+    } else {
+      tip = isOwner
+        ? '邀请码已失效，点「重置」可重新生成'
+        : '邀请码已失效，请让创建者打开账本管理页重新生成';
+      tipWarn = true;
+    }
+
     return {
       ...detail,
       members,
-      _inviteExpireText: this.formatExpire(detail.inviteCodeExpireAt),
-      _inviteUsed: detail.inviteCodeUsed === true,
-      // 有码、没用掉、没过期，才算可用
-      _inviteUsable: !!detail.inviteCode
-        && detail.inviteCodeUsed !== true
-        && Number(detail.inviteCodeExpireAt) > Date.now(),
+      _inviteTip: tip,
+      _inviteTipWarn: tipWarn,
+      // 分享卡片是否可用（令牌缺失或过期时只发普通分享）
       _shareUsable: !!detail.inviteToken
         && Number(detail.inviteTokenExpireAt) > Date.now(),
-      _shareExpireText: this.formatExpire(detail.inviteTokenExpireAt),
     };
   },
 
