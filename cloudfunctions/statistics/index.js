@@ -43,7 +43,8 @@ function buildScope(openid, ledgerId) {
 
 /**
  * 按日期分组拉取该范围的收支（expense/income 各一次聚合）
- * 返回 [{ date, expense, income }]
+ * 返回 [{ date, expense, income, expenseCount, incomeCount, count }]
+ * 注意：走聚合管道，不受云数据库 .get() 单次 100 条上限影响
  */
 async function fetchGroupedByDate(openid, ledgerId, startDate, endDate) {
   const scope = buildScope(openid, ledgerId);
@@ -55,25 +56,90 @@ async function fetchGroupedByDate(openid, ledgerId, startDate, endDate) {
   const [expRes, incRes] = await Promise.all([
     db.collection('expenses').aggregate()
       .match({ ...match, type: 'expense' })
-      .group({ _id: '$date', total: $.sum('$amount') })
+      .group({ _id: '$date', total: $.sum('$amount'), count: $.sum(1) })
       .end(),
     db.collection('expenses').aggregate()
       .match({ ...match, type: 'income' })
-      .group({ _id: '$date', total: $.sum('$amount') })
+      .group({ _id: '$date', total: $.sum('$amount'), count: $.sum(1) })
       .end(),
   ]);
 
   const map = {};
+  const ensure = (k) => {
+    if (!map[k]) map[k] = { date: k, expense: 0, income: 0, expenseCount: 0, incomeCount: 0, count: 0 };
+    return map[k];
+  };
   expRes.list.forEach((r) => {
-    if (!map[r._id]) map[r._id] = { date: r._id, expense: 0, income: 0 };
-    map[r._id].expense = r.total;
+    const row = ensure(r._id);
+    row.expense = r.total;
+    row.expenseCount = r.count;
   });
   incRes.list.forEach((r) => {
-    if (!map[r._id]) map[r._id] = { date: r._id, expense: 0, income: 0 };
-    map[r._id].income = r.total;
+    const row = ensure(r._id);
+    row.income = r.total;
+    row.incomeCount = r.count;
   });
 
-  return Object.values(map);
+  return Object.values(map).map((r) => ({ ...r, count: r.expenseCount + r.incomeCount }));
+}
+
+/**
+ * 聚合该范围的收支总额与笔数（聚合管道，无 100 条上限）
+ * 返回 { expense, income, expenseCount, incomeCount, recordCount }
+ */
+async function fetchTotals(openid, ledgerId, startDate, endDate) {
+  const scope = buildScope(openid, ledgerId);
+  const match = { ...scope };
+  if (startDate && endDate) {
+    match.date = _.gte(startDate).and(_.lte(endDate));
+  }
+
+  const res = await db.collection('expenses').aggregate()
+    .match(match)
+    .group({ _id: '$type', total: $.sum('$amount'), count: $.sum(1) })
+    .end();
+
+  const out = { expense: 0, income: 0, expenseCount: 0, incomeCount: 0 };
+  res.list.forEach((r) => {
+    if (r._id === 'income') {
+      out.income = r.total;
+      out.incomeCount = r.count;
+    } else {
+      out.expense += r.total;
+      out.expenseCount += r.count;
+    }
+  });
+  out.recordCount = out.expenseCount + out.incomeCount;
+  return out;
+}
+
+/**
+ * 按分类聚合（聚合管道，无 100 条上限）
+ * 返回 [{ categoryId, categoryName, amount, count }]，未排序
+ */
+async function fetchGroupedByCategory(openid, ledgerId, startDate, endDate, type) {
+  const scope = buildScope(openid, ledgerId);
+  const match = { ...scope, type };
+  if (startDate && endDate) {
+    match.date = _.gte(startDate).and(_.lte(endDate));
+  }
+
+  const res = await db.collection('expenses').aggregate()
+    .match(match)
+    .group({
+      _id: '$categoryId',
+      amount: $.sum('$amount'),
+      count: $.sum(1),
+      categoryName: $.first('$categoryName'),
+    })
+    .end();
+
+  return res.list.map((r) => ({
+    categoryId: r._id,
+    categoryName: r.categoryName,
+    amount: r.amount,
+    count: r.count,
+  }));
 }
 
 /**
@@ -273,41 +339,31 @@ async function getTodayStats(openid, { ledgerId }) {
   const today = formatDate(new Date());
 
   try {
-    const expenses = await db.collection('expenses')
-      .where({ ...buildScope(openid, ledgerId), date: today })
-      .get();
-
-    const summary = expenses.data.reduce((acc, item) => {
-      if (item.type === 'expense') {
-        acc.totalExpense += item.amount;
-        acc.expenseCount += 1;
-      } else {
-        acc.totalIncome += item.amount;
-        acc.incomeCount += 1;
-      }
-      return acc;
-    }, { totalExpense: 0, totalIncome: 0, expenseCount: 0, incomeCount: 0, recordCount: expenses.data.length });
+    const [totals, categories] = await Promise.all([
+      fetchTotals(openid, ledgerId, today, today),
+      fetchGroupedByCategory(openid, ledgerId, today, today, 'expense'),
+    ]);
 
     // 按分类汇总今日支出
-    const categoryBreakdown = {};
-    expenses.data
-      .filter((item) => item.type === 'expense')
-      .forEach((item) => {
-        const key = item.categoryId;
-        if (!categoryBreakdown[key]) {
-          categoryBreakdown[key] = { categoryId: key, categoryName: item.categoryName, amount: 0, count: 0 };
-        }
-        categoryBreakdown[key].amount += item.amount;
-        categoryBreakdown[key].count += 1;
-      });
+    const categoryBreakdown = categories
+      .map((cat) => ({
+        categoryId: cat.categoryId,
+        categoryName: cat.categoryName,
+        amount: cat.amount,
+        count: cat.count,
+      }))
+      .sort((a, b) => b.amount - a.amount);
 
     return {
       code: 0,
       data: {
-        ...summary,
+        totalExpense: totals.expense,
+        totalIncome: totals.income,
+        expenseCount: totals.expenseCount,
+        incomeCount: totals.incomeCount,
+        recordCount: totals.recordCount,
         date: today,
-        categoryBreakdown: Object.values(categoryBreakdown)
-          .sort((a, b) => b.amount - a.amount),
+        categoryBreakdown,
       },
     };
   } catch (err) {
@@ -327,24 +383,17 @@ async function getMonthlyStats(openid, { year, month, ledgerId }) {
   const endDate = `${ym}-${String(lastDay).padStart(2, '0')}`;
 
   try {
-    const expenses = await db.collection('expenses')
-      .where({
-        ...buildScope(openid, ledgerId),
-        date: _.gte(startDate).and(_.lte(endDate)),
-      })
-      .get();
+    const [totals, grouped] = await Promise.all([
+      fetchTotals(openid, ledgerId, startDate, endDate),
+      fetchGroupedByDate(openid, ledgerId, startDate, endDate),
+    ]);
 
     const summary = {
-      totalExpense: 0,
-      totalIncome: 0,
-      recordCount: expenses.data.length,
-      daysWithRecords: new Set(expenses.data.map((e) => e.date)).size,
+      totalExpense: totals.expense,
+      totalIncome: totals.income,
+      recordCount: totals.recordCount,
+      daysWithRecords: grouped.filter((g) => g.expense > 0 || g.income > 0).length,
     };
-
-    expenses.data.forEach((item) => {
-      if (item.type === 'expense') summary.totalExpense += item.amount;
-      else summary.totalIncome += item.amount;
-    });
 
     // 日均支出
     const daysInMonth = lastDay;
@@ -371,30 +420,19 @@ async function getCategoryStats(openid, { startDate, endDate, type = 'expense', 
   }
 
   try {
-    const expenses = await db.collection('expenses')
-      .where({
-        ...buildScope(openid, ledgerId),
-        type,
-        date: _.gte(startDate).and(_.lte(endDate)),
-      })
-      .get();
+    const grouped = await fetchGroupedByCategory(openid, ledgerId, startDate, endDate, type);
 
-    const categoryMap = {};
     let totalAmount = 0;
-
-    expenses.data.forEach((item) => {
-      const key = item.categoryId;
-      if (!categoryMap[key]) {
-        categoryMap[key] = { categoryId: key, categoryName: item.categoryName, amount: 0, count: 0 };
-      }
-      categoryMap[key].amount += item.amount;
-      categoryMap[key].count += 1;
-      totalAmount += item.amount;
+    grouped.forEach((cat) => {
+      totalAmount += cat.amount;
     });
 
-    const categories = Object.values(categoryMap)
+    const categories = grouped
       .map((cat) => ({
-        ...cat,
+        categoryId: cat.categoryId,
+        categoryName: cat.categoryName,
+        amount: cat.amount,
+        count: cat.count,
         percentage: totalAmount > 0 ? Math.round((cat.amount / totalAmount) * 10000) / 100 : 0,
       }))
       .sort((a, b) => b.amount - a.amount);
@@ -419,26 +457,20 @@ async function getDailyTrend(openid, { year, month, ledgerId }) {
   const endDate = `${ym}-${String(lastDay).padStart(2, '0')}`;
 
   try {
-    const expenses = await db.collection('expenses')
-      .where({
-        ...buildScope(openid, ledgerId),
-        date: _.gte(startDate).and(_.lte(endDate)),
-      })
-      .get();
+    const grouped = await fetchGroupedByDate(openid, ledgerId, startDate, endDate);
 
-    // 按日期分组
+    // 按日期分组（初始化所有日期，保证折线图完整）
     const dailyMap = {};
-    // 初始化所有日期
     for (let d = 1; d <= lastDay; d++) {
       const key = `${ym}-${String(d).padStart(2, '0')}`;
       dailyMap[key] = { date: key, day: d, expense: 0, income: 0, count: 0 };
     }
 
-    expenses.data.forEach((item) => {
-      if (dailyMap[item.date]) {
-        if (item.type === 'expense') dailyMap[item.date].expense += item.amount;
-        else dailyMap[item.date].income += item.amount;
-        dailyMap[item.date].count += 1;
+    grouped.forEach((g) => {
+      if (dailyMap[g.date]) {
+        dailyMap[g.date].expense = g.expense;
+        dailyMap[g.date].income = g.income;
+        dailyMap[g.date].count = g.count;
       }
     });
 
@@ -502,27 +534,17 @@ async function getSummaryByRange(openid, { range = 'month', ledgerId }) {
   }
 
   try {
-    const expenses = await db.collection('expenses')
-      .where({
-        ...buildScope(openid, ledgerId),
-        date: _.gte(startDate).and(_.lte(endDate)),
-      })
-      .get();
+    const totals = await fetchTotals(openid, ledgerId, startDate, endDate);
 
     const summary = {
-      totalExpense: 0,
-      totalIncome: 0,
-      recordCount: expenses.data.length,
+      totalExpense: totals.expense,
+      totalIncome: totals.income,
+      recordCount: totals.recordCount,
       range,
       label,
       startDate,
       endDate,
     };
-
-    expenses.data.forEach((item) => {
-      if (item.type === 'expense') summary.totalExpense += item.amount;
-      else summary.totalIncome += item.amount;
-    });
 
     summary.balance = summary.totalIncome - summary.totalExpense;
 

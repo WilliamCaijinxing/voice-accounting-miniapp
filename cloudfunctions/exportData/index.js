@@ -5,13 +5,21 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const MAX_LIMIT = 100; // 单次查询上限
+const CONCURRENCY = 4; // 分页并发上限：避免一次性 N 个请求打满连接导致云函数超时
+const MAX_EXPORT = 20000; // 单次导出条数上限，防止超大账本打爆内存
 const { guardLedgerAccess } = require('./ledger-guard');
 
 /**
  * CSV 转义：字段中含逗号/引号/换行时需要加引号
+ * 同时防「CSV 公式注入」——Excel 会把 = + - @ 开头的单元格当公式执行，
+ * 描述/分类等用户可控字段可能被写成 =HYPERLINK(...) 之类的载荷。
+ * 纯数字（含负数）不加前缀，避免破坏金额列。
  */
 function csvEscape(value) {
-  const str = String(value == null ? '' : value);
+  let str = String(value == null ? '' : value);
+  if (/^[=+\-@\t\r]/.test(str) && !/^-?\d+(\.\d+)?$/.test(str)) {
+    str = "'" + str;
+  }
   if (/[",\n\r]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -31,32 +39,47 @@ function toYuan(amount) {
  * - 个人账本（ledgerId 为空）：仅导出本人数据
  */
 async function fetchAllExpenses(openid, startDate, endDate, ledgerId) {
+  const _ = db.command;
   const where = {};
   if (ledgerId) {
     where.ledgerId = ledgerId;
   } else {
+    // 个人账本：仅本人、且未归属任何共享账本的记录
+    // （口径与 expenseCRUD/statistics 的 buildScope 保持一致，否则个人导出会混入共享账本里的账）
     where._openid = openid;
+    where.ledgerId = _.exists(false);
   }
   if (startDate && endDate) {
-    where.date = db.command.gte(startDate).and(db.command.lte(endDate));
+    where.date = _.gte(startDate).and(_.lte(endDate));
   }
 
   const countRes = await db.collection('expenses').where(where).count();
-  const total = countRes.total;
-
-  const tasks = [];
-  for (let i = 0; i < Math.ceil(total / MAX_LIMIT); i++) {
-    tasks.push(
-      db.collection('expenses')
-        .where(where)
-        .orderBy('date', 'desc')
-        .skip(i * MAX_LIMIT)
-        .limit(MAX_LIMIT)
-        .get()
-    );
+  const total = Math.min(countRes.total, MAX_EXPORT);
+  if (countRes.total > MAX_EXPORT) {
+    console.warn(`[exportData] 记录数 ${countRes.total} 超过单次上限 ${MAX_EXPORT}，本次仅导出前 ${MAX_EXPORT} 条`);
   }
-  const results = await Promise.all(tasks);
-  return results.reduce((acc, res) => acc.concat(res.data), []);
+
+  // 分批并发拉取：每批最多 CONCURRENCY 个请求，避免 N 个请求同时发出导致 20s 超时
+  const pages = Math.ceil(total / MAX_LIMIT);
+  const all = [];
+  for (let start = 0; start < pages; start += CONCURRENCY) {
+    const batch = [];
+    for (let i = start; i < Math.min(start + CONCURRENCY, pages); i++) {
+      batch.push(
+        db.collection('expenses')
+          .where(where)
+          .orderBy('date', 'desc')
+          .skip(i * MAX_LIMIT)
+          .limit(MAX_LIMIT)
+          .get()
+      );
+    }
+    const results = await Promise.all(batch);
+    results.forEach((res) => {
+      all.push(...res.data);
+    });
+  }
+  return all;
 }
 
 exports.main = async (event) => {
@@ -112,7 +135,8 @@ exports.main = async (event) => {
       if (ledgerId) {
         base.push(csvEscape(openidMap[item._openid] || '成员'));
       }
-      base.push(csvEscape(item.createTime ? new Date(item.createTime).toLocaleString('zh-CN') : ''));
+      // 字段名以 schema/写入方为准：expenseCRUD 写入的是 createdAt（此前误用 createTime 导致该列恒为空）
+      base.push(csvEscape(item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN') : ''));
       return base.join(',');
     });
 
