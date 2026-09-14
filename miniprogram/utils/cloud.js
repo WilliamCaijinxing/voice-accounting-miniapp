@@ -141,9 +141,9 @@ const ledgerAPI = {
   joinByCode: (code, nickname = '', avatar = '') =>
     callCloud('groupCRUD', { action: 'joinByCode', code, nickname, avatar }),
 
-  // 分享卡片加入
-  joinByShare: (ledgerId, nickname = '', avatar = '') =>
-    callCloud('groupCRUD', { action: 'joinByShare', ledgerId, nickname, avatar }),
+  // 分享卡片加入（token 为创建者签发的限时分享令牌，仅有 ledgerId 不再能入账）
+  joinByShare: (ledgerId, token, nickname = '', avatar = '') =>
+    callCloud('groupCRUD', { action: 'joinByShare', ledgerId, token, nickname, avatar }),
 
   // 退出账本
   quit: (ledgerId) => callCloud('groupCRUD', { action: 'quit', ledgerId }),

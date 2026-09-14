@@ -124,7 +124,7 @@ Page({
     }
   },
 
-  /** 规整成员展示字段 */
+  /** 规整成员展示字段 + 预计算邀请凭证状态（WXML 里不做日期运算） */
   normalizeDetail(detail) {
     if (!detail) return null;
     const members = (detail.members || []).map((m) => ({
@@ -132,7 +132,28 @@ Page({
       displayName: m.nickname || (m.openid === detail.ownerOpenid ? '创建者' : '成员'),
       isOwner: m.openid === detail.ownerOpenid,
     }));
-    return { ...detail, members };
+    return {
+      ...detail,
+      members,
+      _inviteExpireText: this.formatExpire(detail.inviteCodeExpireAt),
+      _inviteUsed: detail.inviteCodeUsed === true,
+      // 有码、没用掉、没过期，才算可用
+      _inviteUsable: !!detail.inviteCode
+        && detail.inviteCodeUsed !== true
+        && Number(detail.inviteCodeExpireAt) > Date.now(),
+      _shareUsable: !!detail.inviteToken
+        && Number(detail.inviteTokenExpireAt) > Date.now(),
+      _shareExpireText: this.formatExpire(detail.inviteTokenExpireAt),
+    };
+  },
+
+  /** 有效期文案：后端下发的是毫秒时间戳 */
+  formatExpire(ts) {
+    const t = Number(ts) || 0;
+    if (!t || t <= Date.now()) return '已失效';
+    const d = new Date(t);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   },
 
   closeDetail() {
@@ -165,8 +186,10 @@ Page({
     try {
       const res = await ledgerAPI.regenerateCode(detail._id);
       wx.hideLoading();
-      this.setData({ 'detail.inviteCode': res.inviteCode });
-      wx.showToast({ title: '已重生成', icon: 'success' });
+      // 重置会同时轮换邀请码与分享令牌，旧的邀请码和已发出的分享链接立即全部失效
+      // 重新走一遍 normalizeDetail 以刷新 _invite* / _share* 展示字段
+      this.setData({ detail: this.normalizeDetail({ ...detail, ...res }) });
+      wx.showToast({ title: '已生成新邀请码', icon: 'success' });
     } catch (err) {
       wx.hideLoading();
     }
@@ -254,14 +277,20 @@ Page({
 
   noop() {},
 
-  // ============ 分享给微信好友（分享卡片含 ledgerId，对方点开即加入） ============
+  // ============ 分享给微信好友 ============
+  // 分享卡片携带 ledgerId + 创建者签发的限时令牌；仅有 ledgerId 不再能入账（P0-3）。
+  // 令牌可被创建者「重置」作废，有效期 72 小时。
   onShareAppMessage() {
     const detail = this.data.detail;
-    if (detail) {
+    if (detail && detail.inviteToken && detail._shareUsable) {
       return {
         title: `邀请你加入「${detail.name}」一起记账`,
-        path: `/pages/index/index?ledgerId=${detail._id}&invite=1`,
+        path: `/pages/index/index?ledgerId=${detail._id}&token=${detail.inviteToken}`,
       };
+    }
+    if (detail) {
+      // 凭证已失效：只发普通分享，避免对方点开后被拒
+      wx.showToast({ title: '邀请链接已失效，请先重置', icon: 'none' });
     }
     return {
       title: '语音记账，一句话搞定！',

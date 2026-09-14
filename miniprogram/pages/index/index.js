@@ -58,8 +58,9 @@ Page({
   },
 
   async bootstrap(options) {
+    // 分享卡片 path 携带 ledgerId + token（token 由创建者签发、72h 有效、可被重置作废）
     if (options && options.ledgerId) {
-      await this.handleShareJoin(options.ledgerId);
+      await this.handleShareJoin(options.ledgerId, options.token || '');
     }
     await this.refresh();
     // 预热识别云函数，消除首次识别的冷启动耗时
@@ -216,15 +217,27 @@ Page({
   },
 
   // 分享卡片携带 ledgerId 进入时，自动加入并切换
-  async handleShareJoin(ledgerId) {
+  async handleShareJoin(ledgerId, token) {
     try {
       const userInfo = getApp().globalData.userInfo || {};
-      const ledger = await ledgerAPI.joinByShare(ledgerId, userInfo.nickName || '', userInfo.avatarUrl || '');
+      const ledger = await ledgerAPI.joinByShare(
+        ledgerId,
+        token,
+        userInfo.nickName || '',
+        userInfo.avatarUrl || ''
+      );
       getApp().setCurrentLedger({ id: ledger._id, name: ledger.name, type: 'shared' });
       wx.showToast({ title: '已加入共享账本', icon: 'success' });
     } catch (err) {
-      // 已加入 / 账本不存在等情况静默处理
+      // 链接失效/过期、账本已解散等情况必须让用户看见原因，
+      // 否则点开卡片后静默停在个人账本，用户不知道发生了什么
       console.warn('[Index] share join failed:', err);
+      wx.showModal({
+        title: '未能加入共享账本',
+        content: (err && err.message) || '邀请链接无效，请让创建者重新分享',
+        showCancel: false,
+        confirmText: '知道了',
+      });
     }
   },
 

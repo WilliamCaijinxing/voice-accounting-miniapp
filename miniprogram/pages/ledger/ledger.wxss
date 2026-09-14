@@ -281,6 +281,16 @@
   display: flex;
   gap: 12rpx;
 }
+/* 邀请凭证状态说明：一次性邀请码/分享链接的有效期与失效原因 */
+.invite-tip {
+  margin: -8rpx 0 20rpx;
+  font-size: var(--font-xs, 22rpx);
+  color: var(--color-text-hint, #999);
+  line-height: 1.5;
+}
+.invite-tip-warn {
+  color: var(--color-expense, #FA5151);
+}
 .mini-btn {
   font-size: 26rpx;
   padding: 0 28rpx;
