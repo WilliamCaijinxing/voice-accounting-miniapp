@@ -50,25 +50,56 @@ Page({
     this.initRecorder();
     this.initCategories();
 
-    // 通过分享卡片进入：自动加入共享账本
-    if (options && options.ledgerId) {
-      this.handleShareJoin(options.ledgerId);
-    }
+    // onLoad 后紧接着会触发一次 onShow，这里标记跳过，避免首进首页重复发一轮请求
+    this._skipNextShow = true;
 
-    this.refresh();
+    // 通过分享卡片进入：必须先 await 加入结果，再刷新，否则刷新的还是切换前的账本
+    this.bootstrap(options);
+  },
+
+  async bootstrap(options) {
+    if (options && options.ledgerId) {
+      await this.handleShareJoin(options.ledgerId);
+    }
+    await this.refresh();
     // 预热识别云函数，消除首次识别的冷启动耗时
     this.warmupVoice();
   },
 
   onShow() {
+    this._pageHidden = false;
+    if (this._skipNextShow) {
+      this._skipNextShow = false;
+      return;
+    }
     // 每次切回首页都刷新数据（先刷新账本列表，再刷新数据）
     this.refresh();
     // 每次进入首页都尝试预热（内部有 20s 节流）
     this.warmupVoice();
   },
 
+  onHide() {
+    // 录音中切后台 / 跳走：必须停录并清计时器，否则 15s 后会在后台弹出确认卡
+    this._pageHidden = true;
+    this.abortRecording();
+  },
+
   onUnload() {
+    this._destroyed = true;
+    this.abortRecording();
+  },
+
+  /** 中止录音并复位（后台/卸载时调用，丢弃本次录音结果） */
+  abortRecording() {
     this.clearTimer();
+    if (this.data.phase === 'recording') {
+      this.setData({ phase: 'idle', recordingTime: 0 });
+      try {
+        if (this.recorderManager) this.recorderManager.stop();
+      } catch (e) {
+        // 停录失败无需处理，已复位到 idle
+      }
+    }
   },
 
   onPullDownRefresh() {
@@ -84,6 +115,10 @@ Page({
   },
 
   async loadData() {
+    // 请求序号：快速连点切换账本时会有多轮请求并发，旧请求返回后必须丢弃，
+    // 否则慢返回的旧账本数据会覆盖新账本（页面显示与当前账本不一致）
+    const seq = (this._dataSeq = (this._dataSeq || 0) + 1);
+
     this.setData({ loading: true });
     const app = getApp();
     const ledger = app.getCurrentLedger();
@@ -110,6 +145,9 @@ Page({
           console.warn('Ledger detail failed', e);
         }
       }
+
+      // 已有更新的请求发出（账本已切换），本次结果作废
+      if (seq !== this._dataSeq) return;
 
       // 预计算格式化字符串与颜色，不在 WXML 中调用函数
       // （WXML 的 Mustache 不支持调用 Page 方法，直接写会静默渲染为空）
@@ -140,18 +178,20 @@ Page({
         loading: false,
       });
 
-      // 并行加载预算信息（失败不影响主流程）
-      this.loadBudgetInfo(month.totalExpense, ledgerId).catch(() => {});
+      // 并行加载预算信息（失败不影响主流程；带 seq 防止旧账本的预算写入新账本）
+      this.loadBudgetInfo(month.totalExpense, ledgerId, seq).catch(() => {});
     } catch (err) {
+      if (seq !== this._dataSeq) return;
       console.error('[Index] loadData error:', err);
       this.setData({ loading: false });
     }
   },
 
   // 加载预算信息（共享账本传入 ledgerId）
-  async loadBudgetInfo(monthExpense, ledgerId = '') {
+  async loadBudgetInfo(monthExpense, ledgerId = '', seq) {
     try {
       const budget = await budgetAPI.get(ledgerId);
+      if (seq !== undefined && seq !== this._dataSeq) return; // 账本已切换，丢弃
       if (budget && budget.monthlyBudget > 0) {
         const percent = Math.round((monthExpense / 100 / budget.monthlyBudget) * 100);
         const remaining = budget.monthlyBudget - monthExpense / 100;
@@ -538,7 +578,11 @@ Page({
       return;
     }
 
-    wx.showLoading({ title: '保存中...' });
+    // 防重复提交：showLoading 未加 mask，断网时用户会连点保存按钮导致重复入账
+    if (this._saving) return;
+    this._saving = true;
+
+    wx.showLoading({ title: '保存中...', mask: true });
 
     try {
       await expenseAPI.create({
@@ -561,7 +605,14 @@ Page({
       await this.loadData().catch(() => {});
     } catch (err) {
       wx.hideLoading();
-      // error handled in cloud.js
+      console.error('[Index] saveExpense error:', err);
+      // 云函数异常时 callCloud 已弹过 toast；这里兜底非云函数异常，
+      // 保证断网/异常场景下用户一定看到失败原因并能重试（确认卡保留）
+      if (!(err && (err.message || err.errMsg))) {
+        wx.showToast({ title: '保存失败，请重试', icon: 'none' });
+      }
+    } finally {
+      this._saving = false;
     }
   },
 
@@ -585,10 +636,15 @@ Page({
       editable: true,
       placeholderText: '输入金额和描述，如：午餐35元',
       success: async (res) => {
-        if (res.confirm && res.content) {
-          this.setData({ rawText: res.content, phase: 'parsing' });
+        if (!res.confirm || !res.content) return;
+
+        this.setData({ rawText: res.content, phase: 'parsing' });
+
+        // 必须捕获异常：parseVoice 走 callCloud，断网/云函数异常时会 reject。
+        // 此前没有 catch，phase 会永久停在 'parsing'，页面卡在「解析中」无法恢复。
+        try {
           const parseResult = await voiceAPI.parse(res.content);
-          if (parseResult.success) {
+          if (parseResult && parseResult.success) {
             const parsed = parseResult.parsed;
             if (!parsed.date) {
               parsed.date = this.data.todayStr;
@@ -597,6 +653,13 @@ Page({
           } else {
             this.setData({ phase: 'idle' });
             wx.showToast({ title: '未能解析，请检查格式', icon: 'none' });
+          }
+        } catch (err) {
+          console.error('[Index] manual parse error:', err);
+          this.setData({ phase: 'idle' });
+          // callCloud 已对云函数异常弹过 toast，这里只补「非云函数异常」的提示，避免重复弹窗
+          if (!(err && (err.message || err.errMsg))) {
+            wx.showToast({ title: '解析失败，请重试', icon: 'none' });
           }
         }
       },

@@ -71,10 +71,16 @@ Page({
   },
 
   onLoad() {
+    // onLoad 后紧接着会触发一次 onShow，标记跳过以免首进统计页重复发一轮请求
+    this._skipNextShow = true;
     this.init();
   },
 
   onShow() {
+    if (this._skipNextShow) {
+      this._skipNextShow = false;
+      return;
+    }
     this.init();
   },
 
@@ -87,10 +93,21 @@ Page({
 
   async init() {
     const ledgerId = this.syncCurrentLedger();
+
+    // 账本切换后，月视图的分页偏移必须归零，否则翻的仍是上一个账本的月份区间
+    if (this._lastLedgerId !== ledgerId) {
+      this._lastLedgerId = ledgerId;
+      if (this.data.monthOffset !== 0) this.setData({ monthOffset: 0 });
+    }
+
+    // 本轮请求序号：账本切换 / 多次 onShow 并发时，旧结果必须丢弃
+    const seq = (this._dataSeq = (this._dataSeq || 0) + 1);
+
     const [statsOk, budgetOk] = await Promise.all([
-      this.loadAll(ledgerId).then(() => true).catch(() => false),
-      this.loadBudget(ledgerId).then(() => true).catch(() => false),
+      this.loadAll(ledgerId, seq).then(() => true).catch(() => false),
+      this.loadBudget(ledgerId, seq).then(() => true).catch(() => false),
     ]);
+    if (seq !== this._dataSeq) return; // 已被更新的请求取代
     if (statsOk && this.data.activeRange === 'month') {
       const budget = budgetOk ? this.data.budget : null;
       this.updateBudgetAnalysis(this.data.summary.totalExpense, budget);
@@ -108,13 +125,18 @@ Page({
 
   // ==================== 总加载 ====================
 
-  async loadAll(ledgerId = currentLedgerId()) {
+  async loadAll(ledgerId = currentLedgerId(), seq) {
+    // 未显式传入 seq（如切换「日/月/年」标签）时另起一轮，作废在途的旧请求
+    if (seq === undefined) seq = (this._dataSeq = (this._dataSeq || 0) + 1);
+
     this.setData({ loading: true });
     const { activeRange } = this.data;
 
     try {
       const rangeMap = { day: 'today', month: 'month', year: 'year' };
       const summary = await statsAPI.summary(rangeMap[activeRange], ledgerId);
+      if (seq !== this._dataSeq) return; // 已切换维度或账本，旧结果丢弃
+
       const fmtSummary = {
         ...summary,
         _fmtTotalExpense: formatAmount(summary.totalExpense),
@@ -125,10 +147,11 @@ Page({
       };
       this.setData({ summary: fmtSummary, loading: false });
 
-      if (activeRange === 'day') await this.loadDayView(ledgerId);
-      else if (activeRange === 'month') await this.loadMonthView(ledgerId);
-      else if (activeRange === 'year') await this.loadYearView(ledgerId);
+      if (activeRange === 'day') await this.loadDayView(ledgerId, seq);
+      else if (activeRange === 'month') await this.loadMonthView(ledgerId, seq);
+      else if (activeRange === 'year') await this.loadYearView(ledgerId, seq);
     } catch (err) {
+      if (seq !== this._dataSeq) return;
       console.error('Stats load error:', err);
       this.setData({ loading: false });
     }
@@ -136,7 +159,10 @@ Page({
 
   // ==================== 日视图：日历 + 分类 ====================
 
-  async loadDayView(ledgerId = currentLedgerId()) {
+  async loadDayView(ledgerId = currentLedgerId(), seq) {
+    // 直接调用（如快速连翻月份）时另起一轮，保证最后一次点击胜出
+    if (seq === undefined) seq = (this._dataSeq = (this._dataSeq || 0) + 1);
+
     const { calYear, calMonth } = this.data;
     const todayStr = formatDate(new Date());
 
@@ -144,6 +170,7 @@ Page({
       statsAPI.calendar(calYear, calMonth, ledgerId),
       statsAPI.categoryStats(todayStr, todayStr, 'expense', ledgerId),
     ]);
+    if (seq !== this._dataSeq) return; // 已翻到别的月份或切换账本，丢弃
 
     const days = this.buildCalendarGrid((cal && cal.days) || [], calYear, calMonth);
 
@@ -276,7 +303,9 @@ Page({
 
   // ==================== 月视图：月度趋势 + 分类 + 预算 ====================
 
-  async loadMonthView(ledgerId = currentLedgerId()) {
+  async loadMonthView(ledgerId = currentLedgerId(), seq) {
+    if (seq === undefined) seq = (this._dataSeq = (this._dataSeq || 0) + 1);
+
     const { monthOffset } = this.data;
     const now = new Date();
     const monthStart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
@@ -288,6 +317,7 @@ Page({
       statsAPI.categoryStats(monthStart, monthEnd, 'expense', ledgerId),
       statsAPI.trend({ range: 'week', recent: 12, ledgerId }),
     ]);
+    if (seq !== this._dataSeq) return; // 已翻到别的月份区间或切换账本，丢弃
 
     const months = (trend && trend.months) || [];
     const max = months.reduce((m, x) => Math.max(m, x.expense), 0);
@@ -367,7 +397,9 @@ Page({
 
   // ==================== 年视图 ====================
 
-  async loadYearView(ledgerId = currentLedgerId()) {
+  async loadYearView(ledgerId = currentLedgerId(), seq) {
+    if (seq === undefined) seq = (this._dataSeq = (this._dataSeq || 0) + 1);
+
     const year = new Date().getFullYear();
     const yearStart = `${year}-01-01`;
     const yearEnd = `${year}-12-31`;
@@ -376,6 +408,7 @@ Page({
       statsAPI.trend({ range: 'year', ledgerId }),
       statsAPI.categoryStats(yearStart, yearEnd, 'expense', ledgerId),
     ]);
+    if (seq !== this._dataSeq) return; // 已切换账本或维度，丢弃
 
     const years = (res && res.years) || [];
     const max = years.reduce((m, y) => Math.max(m, y.expense), 0);
@@ -430,10 +463,16 @@ Page({
 
   // ==================== 预算 ====================
 
-  async loadBudget(ledgerId = currentLedgerId()) {
+  async loadBudget(ledgerId = currentLedgerId(), seq) {
     const budget = await budgetAPI.get(ledgerId);
-    if (budget && budget.monthlyBudget > 0) {
-      this.setData({ budget });
+    if (seq !== undefined && seq !== this._dataSeq) return budget;
+
+    const hasBudget = !!(budget && budget.monthlyBudget > 0);
+    // 必须无条件写入：从「有预算的账本」切到「没预算的账本」时，
+    // 旧预算若不清掉，页面会继续显示上一个账本的预算条（P0-6 同类问题）
+    this.setData({ budget: hasBudget ? budget : null });
+    if (!hasBudget) {
+      this.setData({ budgetUsed: 0, budgetRemaining: 0, budgetPercent: 0 });
     }
     return budget;
   },
@@ -441,7 +480,13 @@ Page({
   updateBudgetAnalysis(expense, budget) {
     const b = budget || this.data.budget;
     if (!b || !b.monthlyBudget) {
-      this.setData({ advices: this.generateAdvices(expense, null) });
+      // 当前账本没有预算：预算相关数字一并清零，避免残留上一账本的用量
+      this.setData({
+        budgetUsed: expense / 100,
+        budgetRemaining: 0,
+        budgetPercent: 0,
+        advices: this.generateAdvices(expense, null),
+      });
       return;
     }
 

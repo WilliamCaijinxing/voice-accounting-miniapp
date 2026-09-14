@@ -6,6 +6,7 @@
   <view class="card current-card">
     <view class="card-header">
       <text class="card-title">当前消费</text>
+      <text class="card-tip">{{isShared ? '共享账本 · ' : ''}}{{currentLedgerName}}</text>
     </view>
     <view class="current-row">
       <view class="current-item">
