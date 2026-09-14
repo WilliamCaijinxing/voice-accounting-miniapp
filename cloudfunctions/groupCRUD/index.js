@@ -112,6 +112,27 @@ function needRenewCredentials(ledger, nowMs) {
     || isExpiredAt(ledger.inviteTokenExpireAt, nowMs);
 }
 
+/**
+ * 成员变动（被移除 / 主动退出）后轮换邀请凭证。
+ * 成员在离开前已能从账本详情读到邀请码与分享令牌，若不轮换，
+ * 他就能凭记下的令牌在有效期内重新入账 —— 等于「移除成员」形同虚设。
+ * 仅当当前凭证仍可用时才写库，避免无谓更新。
+ */
+async function rotateCredentialsIfActive(ledgerId, ledger) {
+  const now = Date.now();
+  const codeActive = !!ledger.inviteCode
+    && ledger.inviteCodeUsed !== true
+    && !isExpiredAt(ledger.inviteCodeExpireAt, now);
+  const tokenActive = !!ledger.inviteToken
+    && !isExpiredAt(ledger.inviteTokenExpireAt, now);
+  if (!codeActive && !tokenActive) return;
+
+  const credentials = await issueInviteCredentials(now);
+  if (credentials.code !== undefined) return; // 生成失败则保持原凭证，不阻断主流程
+
+  await db.collection(LEDGER_COLL).doc(ledgerId).update({ data: credentials });
+}
+
 /** 返回给前端的凭证视图（时间戳形式，便于前端直接格式化展示） */
 function inviteView(ledger) {
   return {
@@ -275,7 +296,13 @@ async function joinByCode(openid, { code, nickname, avatar }) {
     // 条件 inviteCodeUsed != true 保证两个并发请求只有一个命中，另一个 updated=0 被拒，
     // 避免"两人同时用同一邀请码"都通过上面检查而重复入账。
     const claim = await db.collection(LEDGER_COLL)
-      .where({ _id: ledger._id, inviteCodeUsed: _.neq(true) })
+      // 除「未被核销」外，还显式要求有效期字段存在：MongoDB 的 $ne 对缺失字段也判定为真，
+      // 钉住「凭证字段成套存在」这一前提，避免将来出现局部写入的账本被绕过。
+      .where({
+        _id: ledger._id,
+        inviteCodeUsed: _.neq(true),
+        inviteCodeExpireAt: _.exists(true),
+      })
       .update({
         data: {
           members: _.push(member),
@@ -367,6 +394,9 @@ async function quitLedger(openid, { ledgerId }) {
       data: { members: _.pull({ openid }) },
     });
 
+    // 退出者同样知道当前凭证，轮换后旧令牌立即失效，避免「退出再悄悄回来」
+    await rotateCredentialsIfActive(ledgerId, ledgerRes.data);
+
     return { code: 0, message: '已退出账本' };
   } catch (err) {
     console.error('Quit ledger error:', err);
@@ -393,6 +423,9 @@ async function removeMember(openid, { ledgerId, targetOpenid }) {
     await db.collection(LEDGER_COLL).doc(ledgerId).update({
       data: { members: _.pull({ openid: targetOpenid }) },
     });
+
+    // 被移除者此前可能已读到邀请码/分享令牌，立即轮换，否则他能凭旧凭证重新入账
+    await rotateCredentialsIfActive(ledgerId, ledgerRes.data);
 
     return { code: 0, message: '已移除成员' };
   } catch (err) {
