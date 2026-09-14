@@ -130,10 +130,22 @@
       <text class="confirm-type {{parsed.type === 'income' ? 'income' : 'expense'}}">
         {{parsed.type === 'income' ? '收入' : '支出'}}
       </text>
-      <text class="confirm-amount {{parsed.type === 'income' ? 'income' : 'expense'}}">
-        {{parsed._sign}}¥{{parsed._fmtAmount}}
-      </text>
+      <view class="confirm-amount-edit {{parsed.type === 'income' ? 'income' : 'expense'}}">
+        <text class="confirm-amount-sign">{{parsed._sign}}¥</text>
+        <input
+          class="confirm-amount-input"
+          type="digit"
+          value="{{parsed.amountText}}"
+          placeholder="0.00"
+          placeholder-class="confirm-amount-ph"
+          bindinput="onAmountInput"
+          bindblur="onAmountBlur"
+        />
+      </view>
     </view>
+
+    <!-- 金额可改：语音识别最易出错的恰是数字，识别错了不该逼用户整句重说 -->
+    <text class="confirm-amount-hint">识别有误？直接点上面的金额修改</text>
 
     <!-- 记入哪个账本（只读提示，切换请用顶部账本栏） -->
     <view class="confirm-ledger-tip">
@@ -266,3 +278,15 @@
 
 <!-- 底部安全区 -->
 <view class="safe-bottom" style="height: 120rpx;"></view>
+
+<!-- 保存后撤销条：固定底部，5s 倒计时结束自动收起 -->
+<view class="undo-bar" wx:if="{{undo}}">
+  <view class="undo-bar-info">
+    <text class="undo-bar-text">{{undo._text}}</text>
+    <text class="undo-bar-amount {{undo._typeClass}}">{{undo._amount}}</text>
+  </view>
+  <text class="undo-bar-btn" bindtap="undoExpense">撤销</text>
+  <view class="undo-bar-progress">
+    <view class="undo-bar-progress-fill" style="width: {{undo._progress}};"></view>
+  </view>
+</view>

@@ -5,6 +5,12 @@
 const { formatAmount, getToday, getCategoryIcon } = require('../../utils/util');
 const { voiceAPI, expenseAPI, statsAPI, budgetAPI, ledgerAPI } = require('../../utils/cloud');
 
+// 保存后「撤销条」的停留时长（秒）
+const UNDO_SECONDS = 5;
+// 单笔金额上限（分）：与 parseVoice 的解析上限 1000000 元保持同一口径，
+// 避免手输能写出解析器永远产不出的量级
+const MAX_AMOUNT_CENTS = 1000000 * 100;
+
 Page({
   data: {
     /* ========== 仪表盘 ========== */
@@ -36,6 +42,9 @@ Page({
     confidence: '',
     categories: [],
     todayStr: getToday(),
+
+    // 保存后的撤销条（ASR 数字识别错误的即时纠错出口），null 表示不显示
+    undo: null,
   },
 
   // ==================== 生命周期 ====================
@@ -83,11 +92,14 @@ Page({
     // 录音中切后台 / 跳走：必须停录并清计时器，否则 15s 后会在后台弹出确认卡
     this._pageHidden = true;
     this.abortRecording();
+    // 撤销条只在本次停留期间有效，离开页面即收起（同时清掉定时器，避免后台空转）
+    this.dismissUndo();
   },
 
   onUnload() {
     this._destroyed = true;
     this.abortRecording();
+    this.dismissUndo();
   },
 
   /** 中止录音并复位（后台/卸载时调用，丢弃本次录音结果） */
@@ -533,7 +545,10 @@ Page({
       rawText: rawText || '',
       parsed: {
         ...parsed,
-        _fmtAmount: formatAmount(parsed.amount),
+        // amountText 是金额输入框的绑定值（元，字符串）；amount 仍是权威的「分」，
+        // 两者在 onAmountInput / onAmountBlur 中保持同步。
+        // （金额改为可编辑输入框后，展示一律走 amountText，不再需要 _fmtAmount）
+        amountText: formatAmount(parsed.amount),
         _sign: parsed.type === 'income' ? '+' : '-',
       },
       confidence: confidence || '',
@@ -582,12 +597,63 @@ Page({
     this.setData({ 'parsed.description': e.detail.value });
   },
 
+  /**
+   * 把输入框文本归一成合法金额。
+   * 宽容解析：先剥掉非数字/小数点字符，再 parseFloat（'35.5.5' → 35.5，不直接判废），
+   * 超过上限则截断到上限，非法或 ≤0 返回 0（保存时会被拦截）。
+   * @returns {{amount: number, amountText: string}} amount 单位「分」
+   */
+  normalizeAmount(text) {
+    const cleaned = String(text === undefined || text === null ? '' : text).replace(/[^\d.]/g, '');
+    const yuan = parseFloat(cleaned);
+    if (!Number.isFinite(yuan) || yuan <= 0) {
+      return { amount: 0, amountText: '' };
+    }
+    const cents = Math.min(Math.round(yuan * 100), MAX_AMOUNT_CENTS);
+    return { amount: cents, amountText: formatAmount(cents) };
+  },
+
+  // 金额输入中：只存原文 + 尽力同步 amount，不在输入过程中打断用户
+  onAmountInput(e) {
+    const text = e.detail.value;
+    const patch = { 'parsed.amountText': text };
+    const yuan = parseFloat(String(text).replace(/[^\d.]/g, ''));
+    if (Number.isFinite(yuan) && yuan > 0) {
+      patch['parsed.amount'] = Math.min(Math.round(yuan * 100), MAX_AMOUNT_CENTS);
+    }
+    this.setData(patch);
+  },
+
+  // 金额失焦：归一成规范写法（去掉多余小数位、超限截断），并给出必要提示
+  onAmountBlur(e) {
+    const norm = this.normalizeAmount(e.detail.value);
+    this.setData({
+      'parsed.amount': norm.amount,
+      'parsed.amountText': norm.amountText,
+    });
+
+    if (norm.amount === 0) {
+      wx.showToast({ title: '请输入有效金额', icon: 'none' });
+    } else if (norm.amount === MAX_AMOUNT_CENTS && String(e.detail.value).replace(/[^\d.]/g, '') !== norm.amountText) {
+      // 仅在「确实被截断」时提示，避免刚好等于上限的正常输入被误报
+      wx.showToast({ title: `单笔上限 ${formatAmount(MAX_AMOUNT_CENTS)} 元`, icon: 'none' });
+    }
+  },
+
   // ==================== 保存 ====================
 
   async saveExpense() {
     const { parsed } = this.data;
-    if (!parsed || !parsed.amount) {
+    if (!parsed) {
       wx.showToast({ title: '数据不完整', icon: 'none' });
+      return;
+    }
+
+    // 金额以输入框内容为准再归一一次：用户可能改完直接点保存，不能假设
+    // onAmountBlur 一定先跑（各端 blur 与 tap 的先后并不一致）
+    const norm = this.normalizeAmount(parsed.amountText);
+    if (!norm.amount) {
+      wx.showToast({ title: '请输入有效金额', icon: 'none' });
       return;
     }
 
@@ -597,22 +663,33 @@ Page({
 
     wx.showLoading({ title: '保存中...', mask: true });
 
+    const ledgerId = (getApp().getCurrentLedger().id) || '';
+    const saved = { ...parsed, amount: norm.amount, amountText: norm.amountText };
+
     try {
-      await expenseAPI.create({
-        amount: parsed.amount,
-        type: parsed.type,
-        categoryId: parsed.categoryId,
-        categoryName: parsed.categoryName,
-        date: parsed.date,
-        description: parsed.description,
-        ledgerId: (getApp().getCurrentLedger().id) || '',
+      const created = await expenseAPI.create({
+        amount: saved.amount,
+        type: saved.type,
+        categoryId: saved.categoryId,
+        categoryName: saved.categoryName,
+        date: saved.date,
+        description: saved.description,
+        ledgerId,
       });
 
       wx.hideLoading();
-      wx.showToast({ title: '记账成功!', icon: 'success' });
 
       // 重置录音状态
       this.resetRecord();
+
+      // 成功反馈交给撤销条：它既确认「已记账」，又给出即时纠错出口
+      // （数字识别错了不必再翻到详情页删除）
+      if (created && created._id) {
+        this.showUndo(created._id, saved, ledgerId);
+      } else {
+        // 理论上不会走到：云函数 create 必定回传 _id。兜底保留成功提示
+        wx.showToast({ title: '记账成功!', icon: 'success' });
+      }
 
       // 本页即首页，直接刷新今日/本月统计与最近账单
       await this.loadData().catch(() => {});
@@ -626,6 +703,89 @@ Page({
       }
     } finally {
       this._saving = false;
+    }
+  },
+
+  // ==================== 保存后撤销条 ====================
+
+  /**
+   * 展示撤销条并启动倒计时。
+   * @param {string} id 刚创建的账目 _id
+   * @param {object} saved 已归一化的账目快照（resetRecord 后 this.data.parsed 已清空）
+   * @param {string} ledgerId 账本 id（个人账本为空串）
+   */
+  showUndo(id, saved, ledgerId) {
+    if (this._destroyed) return;
+    this.clearUndoTimer();
+
+    const isIncome = saved.type === 'income';
+    const amountText = formatAmount(saved.amount);
+
+    this.setData({
+      undo: {
+        id,
+        ledgerId,
+        _text: `已记「${saved.categoryName || '未分类'}」`,
+        _amount: `${isIncome ? '+' : '-'}¥${amountText}`,
+        _typeClass: isIncome ? 'income' : 'expense',
+        // 进度条宽度在 JS 侧预计算（WXML Mustache 不支持方法调用）
+        _progress: '100%',
+      },
+    });
+
+    // 下一帧切到 0%，由 CSS transition 平滑走完整个倒计时（只 setData 两次）
+    // 注意：这里的延时与 index.wxss 中 .undo-bar-progress-fill 的 transition 时长
+    // 共同构成倒计时视觉，两者都跟随 UNDO_SECONDS 调整
+    this._undoRaf = setTimeout(() => {
+      this._undoRaf = null;
+      if (this.data.undo) {
+        this.setData({ 'undo._progress': '0%' });
+      }
+    }, 100);
+
+    this._undoTimer = setTimeout(() => {
+      this._undoTimer = null;
+      this.setData({ undo: null });
+    }, UNDO_SECONDS * 1000);
+  },
+
+  /** 撤销刚保存的那一笔 */
+  async undoExpense() {
+    const undo = this.data.undo;
+    if (!undo || !undo.id) return;
+    // 防连点：撤销请求在途时忽略重复点击
+    if (this._undoing) return;
+    this._undoing = true;
+
+    try {
+      await expenseAPI.delete(undo.id, undo.ledgerId);
+      this.dismissUndo();
+      wx.showToast({ title: '已撤销', icon: 'none' });
+      await this.loadData().catch(() => {});
+    } catch (err) {
+      console.error('[Index] undoExpense error:', err);
+      // 失败原因由 callCloud 弹出；保留撤销条让用户可重试
+    } finally {
+      this._undoing = false;
+    }
+  },
+
+  /** 收起撤销条并清掉全部相关定时器 */
+  dismissUndo() {
+    this.clearUndoTimer();
+    if (this.data.undo) {
+      this.setData({ undo: null });
+    }
+  },
+
+  clearUndoTimer() {
+    if (this._undoTimer) {
+      clearTimeout(this._undoTimer);
+      this._undoTimer = null;
+    }
+    if (this._undoRaf) {
+      clearTimeout(this._undoRaf);
+      this._undoRaf = null;
     }
   },
 
