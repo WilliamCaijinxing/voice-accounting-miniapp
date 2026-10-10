@@ -11,6 +11,7 @@
       data-id="{{item.id}}"
       data-type="{{item.type}}"
       data-name="{{item.name}}"
+      data-role="{{item.role}}"
       bindtap="switchLedger"
     >
       <text class="ledger-chip-icon">{{item.type === 'shared' ? '👥' : '📒'}}</text>
@@ -62,8 +63,17 @@
   </view>
 </view>
 
+<!-- 只读成员不能记账（P1-8）：把整个语音区收起来，换成一句说明。
+     服务端已拦下写操作，前端不收口的话用户点下去才被拒，体验像是出了 bug。
+     刻意不加图标 —— 专家团 P0-1 禁用 emoji 作功能图标，现存 emoji 属 P2-2 待清的老账。 -->
+<view class="readonly-zone" wx:if="{{!_canRecord}}">
+  <text class="readonly-title">你在「{{currentLedgerName}}」是只读成员</text>
+  <text class="readonly-desc">可以查看账目和统计，但不能记账、改动或删除任何记录。</text>
+  <text class="readonly-desc">如需记账权限，请让账本创建者在「账本管理」里把你改成「可记账」。</text>
+</view>
+
 <!-- ==================== 语音记账区（页面视觉重心） ==================== -->
-<view class="voice-zone">
+<view class="voice-zone" wx:else>
 
   <!-- ---------- idle：大号语音按钮 ---------- -->
   <block wx:if="{{phase === 'idle'}}">

@@ -111,8 +111,9 @@
     </view>
   </view>
 
-  <!-- 操作按钮 -->
-  <view class="action-bar">
+  <!-- 操作按钮（P1-8：无编辑/删除权限时整块不渲染，
+       只读成员看到的是纯展示页，不会出现「点得动却报错」的错觉） -->
+  <view class="action-bar" wx:if="{{_canEdit}}">
     <!-- 查看模式 -->
     <block wx:if="{{!editing}}">
       <button class="btn-edit" bindtap="toggleEdit">✏️ 修改</button>

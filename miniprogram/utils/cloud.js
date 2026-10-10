@@ -152,6 +152,10 @@ const ledgerAPI = {
   removeMember: (ledgerId, targetOpenid) =>
     callCloud('groupCRUD', { action: 'removeMember', ledgerId, targetOpenid }),
 
+  // 调整成员角色（仅创建者）：role 取 'editor'（可记账）或 'viewer'（仅查看）
+  setMemberRole: (ledgerId, targetOpenid, role) =>
+    callCloud('groupCRUD', { action: 'setMemberRole', ledgerId, targetOpenid, role }),
+
   // 重生成邀请码（仅创建者）
   regenerateCode: (ledgerId) => callCloud('groupCRUD', { action: 'regenerateCode', ledgerId }),
 

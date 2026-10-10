@@ -358,6 +358,19 @@
   font-size: var(--font-xs, 22rpx);
   color: var(--color-text-hint, #999);
 }
+
+/* 角色标识（P1-8）：owner 不可变，其余两态用主色/中性色区分 */
+.member-role.owner { color: var(--color-warning, #FFC300); }
+.member-role.editor { color: var(--color-primary); }
+.member-role.viewer { color: var(--color-text-hint, #999); }
+
+/* 角色切换入口：与「移除」并排，视觉上更轻，避免被误当成危险操作 */
+.member-role-toggle {
+  font-size: var(--font-sm, 26rpx);
+  color: var(--color-primary);
+  padding: 6rpx 16rpx;
+  margin-right: var(--spacing-xs);
+}
 .member-remove {
   font-size: var(--font-sm, 26rpx);
   color: #fa5151;

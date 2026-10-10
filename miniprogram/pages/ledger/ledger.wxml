@@ -122,11 +122,20 @@
           <view class="member-avatar">{{item.isOwner ? '👑' : '👤'}}</view>
           <view class="member-info">
             <text class="member-name">{{item.displayName}}</text>
-            <text class="member-role">{{item.isOwner ? '创建者' : '成员'}}</text>
+            <text class="member-role {{item._roleClass}}">{{item._roleLabel}}</text>
           </view>
+          <!-- 创建者可切换成员角色（P1-8）：editor 能记账能改自己的，viewer 只读 -->
+          <text
+            class="member-role-toggle"
+            wx:if="{{item._canToggleRole}}"
+            data-openid="{{item.openid}}"
+            data-name="{{item.displayName}}"
+            data-current="{{item.role}}"
+            catchtap="toggleMemberRole"
+          >{{item._nextRoleLabel}}</text>
           <text
             class="member-remove"
-            wx:if="{{detail.isOwner && !item.isOwner}}"
+            wx:if="{{item._canToggleRole}}"
             data-openid="{{item.openid}}"
             data-name="{{item.displayName}}"
             catchtap="removeMember"

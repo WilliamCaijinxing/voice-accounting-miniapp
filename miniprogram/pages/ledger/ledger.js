@@ -127,12 +127,24 @@ Page({
   /** 规整成员展示字段 + 预计算邀请凭证状态（WXML 里不做日期运算） */
   normalizeDetail(detail) {
     if (!detail) return null;
-    const members = (detail.members || []).map((m) => ({
-      ...m,
-      displayName: m.nickname || (m.openid === detail.ownerOpenid ? '创建者' : '成员'),
-      isOwner: m.openid === detail.ownerOpenid,
-    }));
     const isOwner = detail.isOwner === true;
+    const members = (detail.members || []).map((m) => {
+      const memberIsOwner = m.openid === detail.ownerOpenid;
+      // 服务端已把角色归一（存量成员的 'member'/缺失值都落成 editor），
+      // 这里只做展示层文案与可操作性判定
+      const role = memberIsOwner ? 'owner' : (m.role || 'editor');
+      return {
+        ...m,
+        role,
+        displayName: m.nickname || (memberIsOwner ? '创建者' : '成员'),
+        isOwner: memberIsOwner,
+        _roleLabel: role === 'owner' ? '创建者' : (role === 'viewer' ? '仅查看' : '可记账'),
+        _roleClass: role,
+        // 只有创建者能改别人的角色，且不能改自己那条
+        _canToggleRole: isOwner && !memberIsOwner,
+        _nextRoleLabel: role === 'viewer' ? '设为可记账' : '设为仅查看',
+      };
+    });
     const used = detail.inviteCodeUsed === true;
     // 有码、没用掉、没过期，才算可用
     const usable = !!detail.inviteCode && !used
@@ -233,6 +245,47 @@ Page({
           wx.showToast({ title: '已移除', icon: 'success' });
           const updated = await ledgerAPI.detail(detail._id);
           this.setData({ detail: this.normalizeDetail(updated) });
+          this.loadLedgers();
+        } catch (err) {
+          wx.hideLoading();
+        }
+      },
+    });
+  },
+
+  /**
+   * 切换成员角色（P1-8，仅创建者）
+   * editor → viewer：对方立刻失去记账与改删自己记录的权限（服务端即时生效）
+   * viewer → editor：恢复记账能力
+   */
+  toggleMemberRole(e) {
+    const { openid, name, current } = e.currentTarget.dataset;
+    if (!openid) return;
+    const detail = this.data.detail;
+    if (!detail || !detail.isOwner) return;
+
+    const nextRole = current === 'viewer' ? 'editor' : 'viewer';
+    const isGrant = nextRole === 'editor';
+    wx.showModal({
+      title: isGrant ? '恢复记账权限' : '设为只读成员',
+      content: isGrant
+        ? `「${name || '该成员'}」将可以记账、修改和删除自己记的账。`
+        : `「${name || '该成员'}」将只能查看账目和统计，不能记账，也不能修改或删除任何记录。`,
+      confirmText: '确定',
+      confirmColor: isGrant ? '#07C160' : '#FA5151',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '保存中...' });
+        try {
+          await ledgerAPI.setMemberRole(detail._id, openid, nextRole);
+          wx.hideLoading();
+          wx.showToast({
+            title: isGrant ? '已恢复可记账' : '已设为只读',
+            icon: 'none',
+          });
+          const updated = await ledgerAPI.detail(detail._id);
+          this.setData({ detail: this.normalizeDetail(updated) });
+          // 首页的账本芯片带着 role，改完要让列表/权限态跟着更新
           this.loadLedgers();
         } catch (err) {
           wx.hideLoading();

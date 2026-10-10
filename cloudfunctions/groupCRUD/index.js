@@ -6,6 +6,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 const LEDGER_COLL = 'ledgers';
+// roleOf / isValidRole / 角色常量来自守卫（唯一事实源，随本函数一同部署）
+const { roleOf, isValidRole, ROLE_OWNER, ROLE_EDITOR, ROLE_VIEWER } = require('./ledger-guard');
 
 // 邀请凭证有效期（P0-3）：原先邀请码永久有效、分享卡片裸传 ledgerId，转发即成为永久成员。
 // 现在改为「一次性邀请码 + 限时分享令牌」，两者均 72 小时有效，创建者重置即全部失效。
@@ -28,6 +30,7 @@ exports.main = async (event) => {
     case 'joinByShare': return joinByShare(OPENID, event);
     case 'quit': return quitLedger(OPENID, event);
     case 'removeMember': return removeMember(OPENID, event);
+    case 'setMemberRole': return setMemberRole(OPENID, event);
     case 'regenerateCode': return regenerateCode(OPENID, event);
     case 'dissolve': return dissolveLedger(OPENID, event);
     default: return { code: -1, message: 'Unknown action: ' + action };
@@ -203,6 +206,8 @@ async function listMyLedgers(openid) {
       ownerOpenid: l.ownerOpenid,
       memberCount: (l.members || []).length,
       isOwner: l.ownerOpenid === openid,
+      // 我在该账本的角色（P1-8）：首页据此决定是否显示语音记账入口
+      myRole: roleOf(l, openid) || ROLE_EDITOR,
       createdAt: l.createdAt,
     }));
 
@@ -245,7 +250,13 @@ async function getLedgerDetail(openid, { ledgerId }) {
         _id: ledger._id,
         name: ledger.name,
         ownerOpenid: ledger.ownerOpenid,
-        members: ledger.members || [],
+        // 成员角色统一经 roleOf 归一（存量成员的 'member'/缺失值都会落成 editor），
+        // 前端可直接按 role 渲染，不必自己猜缺省语义
+        members: (ledger.members || []).map((m) => ({
+          ...m,
+          role: roleOf(ledger, m.openid) || ROLE_EDITOR,
+        })),
+        myRole: roleOf(ledger, openid) || ROLE_EDITOR,
         isOwner,
         createdAt: ledger.createdAt,
         ...inviteView(ledger),
@@ -288,7 +299,9 @@ async function joinByCode(openid, { code, nickname, avatar }) {
       openid,
       nickname: nickname || '',
       avatar: avatar || '',
-      role: 'member',
+      // 新成员默认 editor：能记账、能改删自己的记录；
+      // 想限制对方就由创建者在管理页改成 viewer
+      role: 'editor',
       joinedAt: db.serverDate(),
     };
 
@@ -353,7 +366,9 @@ async function joinByShare(openid, { ledgerId, token, nickname, avatar }) {
       openid,
       nickname: nickname || '',
       avatar: avatar || '',
-      role: 'member',
+      // 新成员默认 editor：能记账、能改删自己的记录；
+      // 想限制对方就由创建者在管理页改成 viewer
+      role: 'editor',
       joinedAt: db.serverDate(),
     };
 
@@ -431,6 +446,57 @@ async function removeMember(openid, { ledgerId, targetOpenid }) {
   } catch (err) {
     console.error('Remove member error:', err);
     return { code: -1, message: '移除失败' };
+  }
+}
+
+/**
+ * 调整成员角色（P1-8 信任底座，仅创建者可用）
+ * - 目标角色只允许 editor / viewer；owner 不可被授予或变更
+ * - 变更即时生效：被改为 viewer 的成员后续写操作会被 ledger-guard 拦下
+ */
+async function setMemberRole(openid, { ledgerId, targetOpenid, role }) {
+  if (!ledgerId) return { code: -1, message: '缺少账本ID' };
+  if (!targetOpenid || typeof targetOpenid !== 'string') {
+    return { code: -1, message: '缺少目标成员' };
+  }
+  if (!isValidRole(role) || role === ROLE_OWNER) {
+    return { code: -1, message: '角色非法（仅支持「可记账」或「仅查看」，创建者不可变更）' };
+  }
+
+  try {
+    const ledgerRes = await db.collection(LEDGER_COLL).doc(ledgerId).get();
+    const ledger = ledgerRes.data;
+    if (!ledger) return { code: -1, message: '账本不存在' };
+    if (ledger.ownerOpenid !== openid) {
+      return { code: -1, message: '只有创建者可以调整成员角色' };
+    }
+    if (targetOpenid === ledger.ownerOpenid) {
+      return { code: -1, message: '不能修改创建者的角色' };
+    }
+    if (!(ledger.members || []).some((m) => m && m.openid === targetOpenid)) {
+      return { code: -1, message: '该成员不在账本中' };
+    }
+
+    // 整体覆盖而非按下标改：微信云数据库不支持 MongoDB 的数组位置操作符 `$.`，
+    // 而 pull + push 会把成员排到末尾。家庭/朋友规模下成员变更是低频人工操作，
+    // 读改写整体覆盖的并发风险可接受（真出并发也只是角色被上一次的快照覆盖，
+    // 创建者重新设置一次即可，不会越权）。
+    const currentRole = roleOf(ledger, targetOpenid);
+    if (currentRole === role) {
+      return { code: 0, data: { _id: ledgerId, targetOpenid, role } };
+    }
+
+    const members = (ledger.members || []).map((m) => (
+      (m && m.openid === targetOpenid) ? { ...m, role } : m
+    ));
+    await db.collection(LEDGER_COLL).doc(ledgerId).update({
+      data: { members, updatedAt: db.serverDate() },
+    });
+
+    return { code: 0, data: { _id: ledgerId, targetOpenid, role } };
+  } catch (err) {
+    console.error('Set member role error:', err);
+    return { code: -1, message: '设置失败' };
   }
 }
 

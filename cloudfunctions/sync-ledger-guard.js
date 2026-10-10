@@ -5,7 +5,9 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = path.join(__dirname, '_shared', 'ledger-guard.js');
-const TARGETS = ['expenseCRUD', 'statistics', 'budgetCRUD', 'exportData'];
+// groupCRUD 也在列：它要用 roleOf 下发「我的角色」，不能自己复制一份角色逻辑
+// （角色语义一旦有两份实现必然漂移 —— 这正是 P1-19 记录过的教训）。
+const TARGETS = ['expenseCRUD', 'statistics', 'budgetCRUD', 'exportData', 'groupCRUD'];
 
 const content = fs.readFileSync(SRC, 'utf8');
 for (const dir of TARGETS) {

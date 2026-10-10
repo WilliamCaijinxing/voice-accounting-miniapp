@@ -7,7 +7,7 @@ const db = cloud.database();
 const MAX_LIMIT = 100; // 单次查询上限
 const CONCURRENCY = 4; // 分页并发上限：避免一次性 N 个请求打满连接导致云函数超时
 const MAX_EXPORT = 20000; // 单次导出条数上限，防止超大账本打爆内存
-const { guardLedgerAccess } = require('./ledger-guard');
+const { guardLedgerAccess, ROLE_EDITOR } = require('./ledger-guard');
 
 /**
  * CSV 转义：字段中含逗号/引号/换行时需要加引号
@@ -90,9 +90,13 @@ exports.main = async (event) => {
     return { code: -1, message: 'Unknown action' };
   }
 
-  // 共享账本导出前必须校验成员身份（防止拖走他人账本数据），个人账本自动放行
+  // 共享账本导出前必须校验成员身份（防止拖走他人账本数据），个人账本自动放行。
+  //
+  // 角色要求 editor 及以上（P1-8）：导出产出的是**文件**——能被转发进聊天记录、
+  // 落到电脑上。一旦只读成员也能导出，创建者就等于失去了对数据流出的控制，
+  // 「只读」只剩界面上的意义。
   if (ledgerId) {
-    const guard = await guardLedgerAccess(ledgerId, OPENID);
+    const guard = await guardLedgerAccess(ledgerId, OPENID, ROLE_EDITOR);
     if (guard.code !== 0) return guard;
   }
 

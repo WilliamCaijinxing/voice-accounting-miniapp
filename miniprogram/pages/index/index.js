@@ -34,6 +34,10 @@ Page({
     ledgers: [{ id: '', name: '我的账本', type: 'personal' }],
     currentLedgerId: '',
     currentLedgerName: '我的账本',
+    // 我在当前账本的角色（P1-8）：个人账本恒为 owner；共享账本由服务端下发
+    currentMyRole: 'owner',
+    // 能否记账 —— 在 JS 侧算好，WXML 只取值（小程序 Mustache 不支持调用方法）
+    _canRecord: true,
 
     /* ========== 语音记账 ========== */
     // 阶段：idle | recording | parsing | confirm
@@ -276,9 +280,10 @@ Page({
     try {
       const res = await ledgerAPI.list();
       const shared = (res && res.list) || [];
+      // role 随账本一起带下来，供切换时零延迟更新权限态
       const options = [
-        { id: '', name: '我的账本', type: 'personal' },
-        ...shared.map((l) => ({ id: l._id, name: l.name, type: 'shared' })),
+        { id: '', name: '我的账本', type: 'personal', role: 'owner' },
+        ...shared.map((l) => ({ id: l._id, name: l.name, type: 'shared', role: l.myRole || 'editor' })),
       ];
 
       // 校验当前共享账本是否仍有效（可能已退出/被解散）
@@ -293,21 +298,43 @@ Page({
         currentLedgerId: active.id || '',
         currentLedgerName: active.name || '我的账本',
       });
+      this.applyRole(active, options);
     } catch (err) {
+      const fallback = [{ id: '', name: '我的账本', type: 'personal', role: 'owner' }];
       this.setData({
-        ledgers: [{ id: '', name: '我的账本', type: 'personal' }],
+        ledgers: fallback,
         currentLedgerId: '',
         currentLedgerName: '我的账本',
       });
+      this.applyRole({ id: '', type: 'personal' }, fallback);
     }
   },
 
   // 切换当前账本
+  /**
+   * 按当前账本的角色刷新权限态（P1-8）
+   * viewer 在共享账本里不能记账 —— 语音入口与手动入口都要收起来，
+   * 否则用户点下去才被服务端拒绝，体验像是出了 bug。
+   */
+  applyRole(ledger, options) {
+    const found = (options || []).find((l) => (l.id || '') === (ledger.id || ''));
+    const role = ledger.type === 'shared' ? (found && found.role) || 'editor' : 'owner';
+    this.setData({
+      currentMyRole: role,
+      _canRecord: role === 'owner' || role === 'editor',
+    });
+  },
+
   async switchLedger(e) {
-    const { id, type, name } = e.currentTarget.dataset;
+    const { id, type, name, role } = e.currentTarget.dataset;
     const app = getApp();
     app.setCurrentLedger({ id: id || '', name, type });
     this.setData({ currentLedgerId: id || '', currentLedgerName: name });
+    // 切换瞬间就把权限态切过去，不必等列表接口回来
+    this.setData({
+      currentMyRole: type === 'shared' ? role || 'editor' : 'owner',
+      _canRecord: (type === 'shared' ? role || 'editor' : 'owner') !== 'viewer',
+    });
     await this.loadData().catch(() => {});
     wx.showToast({ title: `已切换到${name}`, icon: 'none' });
   },

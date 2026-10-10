@@ -5,15 +5,18 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const _ = db.command;
-const { guardLedgerAccess } = require('./ledger-guard');
+const { guardLedgerAccess, ROLE_EDITOR, ROLE_VIEWER } = require('./ledger-guard');
 
 exports.main = async (event) => {
   const { action } = event;
   const { OPENID } = cloud.getWXContext();
 
-  // 统一入口守卫：预算读写均按 ledgerId 隔离，非成员访问与注入型 ledgerId 在此拦截
+  // 统一入口守卫：预算读写均按 ledgerId 隔离，非成员访问与注入型 ledgerId 在此拦截。
+  // 角色分级（P1-8）：查看预算只需是成员（viewer 即可），但**修改**预算属于写操作，
+  // 要求 editor 及以上 —— 共享预算是团队共同目标，不该由只读成员单方面改动。
   if (event.ledgerId) {
-    const guard = await guardLedgerAccess(event.ledgerId, OPENID);
+    const minRole = action === 'set' ? ROLE_EDITOR : ROLE_VIEWER;
+    const guard = await guardLedgerAccess(event.ledgerId, OPENID, minRole);
     if (guard.code !== 0) return guard;
   }
 

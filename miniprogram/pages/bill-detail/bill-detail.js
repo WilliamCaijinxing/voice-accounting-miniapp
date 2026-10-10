@@ -14,6 +14,8 @@ Page({
     // 账单数据
     bill: null,
     recorderName: '',   // 共享账本显示记账人
+    _canEdit: true,     // 预计算：能否编辑（owner / editor 改自己的）
+    _canDelete: true,   // 预计算：能否删除（与编辑同权限）
     categories: [],
     todayStr: getToday(),
   },
@@ -50,7 +52,14 @@ Page({
         loading: false,
       };
 
-      // 共享账本：拉取成员昵称，显示记账人
+      // 权限态（P1-8）：直接采信服务端下发的 canEdit / canDelete。
+      // 前端曾用 app.globalData.openid + myRole 自己推一遍，但静默登录是异步的，
+      // 登录完成前打开本页时 openid 还是空串 → editor 连自己的记录都点不动。
+      // 而且权限判定在前端重复实现必然与服务端漂移（同 P1-19 的教训）。
+      patch._canEdit = data.canEdit === true;
+      patch._canDelete = data.canDelete === true;
+
+      // 共享账本：拉取成员昵称用于显示记账人（仅展示，不参与权限判定）
       if (ledgerId) {
         try {
           const detail = await ledgerAPI.detail(ledgerId);
@@ -81,6 +90,11 @@ Page({
   // ==================== 编辑模式切换 ====================
 
   toggleEdit() {
+    // UI 已隐藏入口，这里再拦一次：防止将来新增入口时漏掉权限判断
+    if (!this.data._canEdit) {
+      wx.showToast({ title: '你在该账本是只读成员，无法修改', icon: 'none' });
+      return;
+    }
     this.setData({ editing: !this.data.editing });
   },
 
