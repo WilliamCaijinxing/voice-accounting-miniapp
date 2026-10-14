@@ -1,8 +1,12 @@
 // app.js - 语音记账小程序入口
-const { CLOUD_ENV, isUsableLedger } = require('./config');
+const { CLOUD_ENV, APP_VERSION, isUsableLedger } = require('./config');
 
 App({
   onLaunch() {
+    // 真机跑的是上传出去的包，本地改动不会自动生效。
+    // 每次启动先报版本号，排查线上问题时用它确认「真机跑的到底是哪一版」。
+    console.log(`[app] 版本 ${APP_VERSION}（云环境 ${CLOUD_ENV}）`);
+
     // 初始化云开发
     if (wx.cloud) {
       wx.cloud.init({
@@ -83,6 +87,15 @@ App({
         });
       });
     };
+  },
+
+  /**
+   * 账本被判为不可用时清掉缓存并回落个人账本。
+   * 这是「云函数守卫以『参数非法』拒绝」之后的前端自愈入口：
+   * 脏 ledgerId 只可能来自本地缓存，清掉它并由调用方重试一次即可继续用。
+   */
+  resetCurrentLedger() {
+    this.setCurrentLedger({ id: '', name: '我的账本', type: 'personal' });
   },
 
   // 设置当前账本并持久化（ledger: {id, name, type:'personal'|'shared'}）

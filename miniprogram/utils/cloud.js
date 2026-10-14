@@ -5,7 +5,7 @@ const app = getApp();
  * 封装 wx.cloud.callFunction，统一错误处理
  * 每次 setData 都跨双线程桥 — 在调用层做最小 payload 提取
  */
-const callCloud = async (name, data = {}) => {
+const callCloud = async (name, data = {}, retried = false) => {
   try {
     const res = await wx.cloud.callFunction({ name, data });
     if (res.result && res.result.code === 0) {
@@ -13,6 +13,18 @@ const callCloud = async (name, data = {}) => {
     }
     throw { code: res.result?.code || -1, message: res.result?.message || '云函数调用失败' };
   } catch (err) {
+    // 守卫只会因为 ledgerId 不是 24 位 hex 而回「参数非法」，而这个值只可能
+    // 来自本地缓存的脏账本。这里就地自愈：清掉账本、以空 ledgerId（个人账本
+    // 语义，守卫直接放行）重试一次。仅重试一次，避免任何异常情况下打转。
+    if (!retried && err && err.message === '参数非法' && data && data.ledgerId) {
+      const app = getApp();
+      if (app && typeof app.resetCurrentLedger === 'function') {
+        console.warn(`[Cloud] ${name} 的 ledgerId 非法，已重置账本并重试一次:`, data.ledgerId);
+        app.resetCurrentLedger();
+        return callCloud(name, Object.assign({}, data, { ledgerId: '' }), true);
+      }
+    }
+
     console.error(`[Cloud] ${name} error:`, err);
     // 凡是带 ledgerId 的请求被拒，把**实际下发的那个值**一并打出来。
     // 此前「参数非法」只能靠倒推 ledgerId 格式才能定位，把它打出来就能一眼看到。
