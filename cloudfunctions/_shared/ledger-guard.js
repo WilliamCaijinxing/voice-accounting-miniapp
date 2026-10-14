@@ -8,8 +8,14 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 
-// 云数据库文档 _id 为 24 位十六进制字符串
-const LEDGER_ID_RE = /^[a-f0-9]{24}$/i;
+// 微信云开发数据库自动生成的文档 _id 是 **32 位**十六进制字符串
+// （实测样本 54ad1eea620fb1d9114b551e6c207cdb，与 MongoDB 的 24 位 ObjectId 不同，
+// 生成规则是云开发自定义的）。曾经错误地假设成 24 位，导致所有真实账本 id 被误判为
+// 「参数非法」——共享账本整体不可用。这里同时兼容 24 位（Mongo 风格 / 历史导入数据）
+// 与 32 位（云开发自动生成）。
+// 这个校验的真正目的只是防 NoSQL 注入（ledgerId 必须是字符串值，不能是 {$ne:null}
+// 这类对象），并不是要精确描述 id 的生成规则 —— 字符集限定为纯 hex 即可。
+const LEDGER_ID_RE = /^[a-f0-9]{24,32}$/i;
 
 /* ============================================================================
  * 成员角色（P1-8 信任底座）
@@ -62,7 +68,9 @@ function roleAtLeast(role, minRole) {
 /**
  * 账本访问守卫。
  * - ledgerId 为空/未传 → 个人账本语义，直接放行（对自己的账本天然全权）；
- * - ledgerId 不是 24 位 hex 字符串 → 拒绝（阻断 NoSQL 操作符注入，如 {$ne:null}/{$exists:true}）；
+ * - ledgerId 不是 24~32 位 hex 字符串 → 拒绝（阻断 NoSQL 操作符注入，如 {$ne:null}/{$exists:true}）；
+ *   （位数口径来自云开发 _id 的实际生成规则：自动生成的 _id 是 32 位 hex，
+ *   24 位仅用于兼容 Mongo 风格 / 历史导入数据。）
  * - 共享账本 → 校验调用者是该账本创建者或成员，且角色达到 minRole。
  * @param {*} ledgerId 客户端传入的账本 ID（外部可控，绝不信任）
  * @param {string} openid 调用者 openid（来自 getWXContext，可信）
