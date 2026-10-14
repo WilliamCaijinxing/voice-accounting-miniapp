@@ -14,6 +14,15 @@ const callCloud = async (name, data = {}) => {
     throw { code: res.result?.code || -1, message: res.result?.message || '云函数调用失败' };
   } catch (err) {
     console.error(`[Cloud] ${name} error:`, err);
+    // 凡是带 ledgerId 的请求被拒，把**实际下发的那个值**一并打出来。
+    // 此前「参数非法」只能靠倒推 ledgerId 格式才能定位，把它打出来就能一眼看到。
+    if (err && err.message && data && 'ledgerId' in data) {
+      console.error(
+        `[Cloud] ${name} 被拒：action=${data.action} `
+        + `ledgerId=${JSON.stringify(data.ledgerId)}（长度=${String(data.ledgerId).length}） `
+        + `原因=${err.message}`
+      );
+    }
     wx.showToast({ title: err.message || '网络异常', icon: 'none' });
     throw err;
   }
