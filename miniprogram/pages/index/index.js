@@ -300,7 +300,10 @@ Page({
       });
       this.applyRole(active, options);
     } catch (err) {
+      // 列表拉取失败时不能只重置 data —— globalData.currentLedger 仍指向旧账本，
+      // 后续 loadData 会带着它去请求，出现「界面写着个人账本、数据却是共享账本」的错位
       const fallback = [{ id: '', name: '我的账本', type: 'personal', role: 'owner' }];
+      app.setCurrentLedger({ id: '', name: '我的账本', type: 'personal' });
       this.setData({
         ledgers: fallback,
         currentLedgerId: '',

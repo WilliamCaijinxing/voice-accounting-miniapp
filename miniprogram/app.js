@@ -1,5 +1,5 @@
 // app.js - 语音记账小程序入口
-const { CLOUD_ENV } = require('./config');
+const { CLOUD_ENV, isUsableLedger } = require('./config');
 
 App({
   onLaunch() {
@@ -19,10 +19,17 @@ App({
     this.globalData.navBarHeight = systemInfo.platform === 'android' ? 48 : 44;
 
     // 恢复上次选中的账本
+    // 必须是「可用账本」：共享账本要带合法 24 位 hex id。缓存里可能留着旧版本
+    // 写入的或手工改过的脏 id，放行的话它会一路传到每个云函数请求，
+    // 最终被 guard 回一句「参数非法」，而用户完全无从判断问题出在哪。
     try {
       const cached = wx.getStorageSync('currentLedger');
-      if (cached && (cached.type === 'personal' || cached.type === 'shared')) {
+      if (isUsableLedger(cached)) {
         this.globalData.currentLedger = cached;
+      } else if (cached) {
+        // 缓存里有脏数据：顺手清掉，避免 getCurrentLedger 的兜底分支再次捞起它
+        wx.removeStorageSync('currentLedger');
+        console.warn('[app] 本地缓存的账本数据不可用，已重置为个人账本：', cached);
       }
     } catch (e) {
       // ignore
@@ -80,9 +87,11 @@ App({
 
   // 设置当前账本并持久化（ledger: {id, name, type:'personal'|'shared'}）
   setCurrentLedger(ledger) {
-    this.globalData.currentLedger = ledger;
+    // 非法账本一律降级为个人账本：宁可退回个人账本，也不能把脏 id 写进缓存
+    const safe = isUsableLedger(ledger) ? ledger : { id: '', name: '我的账本', type: 'personal' };
+    this.globalData.currentLedger = safe;
     try {
-      wx.setStorageSync('currentLedger', ledger);
+      wx.setStorageSync('currentLedger', safe);
     } catch (e) {
       // ignore
     }
@@ -91,15 +100,17 @@ App({
   // 获取当前账本（优先内存，其次缓存）
   getCurrentLedger() {
     let ledger = this.globalData.currentLedger;
-    if (!ledger || (!ledger.id && ledger.type !== 'personal')) {
+    if (!isUsableLedger(ledger)) {
+      // 兜底再读一次缓存，同样必须过校验
       try {
         const cached = wx.getStorageSync('currentLedger');
-        if (cached) ledger = cached;
+        if (isUsableLedger(cached)) ledger = cached;
       } catch (e) {
         // ignore
       }
     }
-    if (!ledger) ledger = { id: '', name: '我的账本', type: 'personal' };
+    // 内存与缓存都不合法 → 落到个人账本（id 为空串，云函数守卫会直接放行）
+    if (!isUsableLedger(ledger)) ledger = { id: '', name: '我的账本', type: 'personal' };
     this.globalData.currentLedger = ledger;
     return ledger;
   },
