@@ -1,0 +1,132 @@
+<!-- pages/import/import.wxml — 导入表格数据（先预览确认，再入库） -->
+
+<view class="imp-page">
+  <view class="import-hero">
+    <text class="import-hero-icon">📥</text>
+    <text class="import-hero-title">导入表格数据</text>
+    <text class="import-hero-desc">支持「小羊记账」版式 Excel，也可导入小程序自己导出的文件</text>
+  </view>
+
+  <!-- 当前账本 -->
+  <view class="imp-ledger-tip">
+    <text class="imp-ledger-tip-icon">📒</text>
+    <text class="imp-ledger-tip-text">导入到：{{currentLedgerName}}</text>
+  </view>
+
+  <!-- 只读成员 -->
+  <view class="readonly-tip" wx:if="{{readonly}}">
+    <text>你在「{{currentLedgerName}}」是只读成员，不能导入数据。可请账本创建者把你改为「可记账」。</text>
+  </view>
+
+  <!-- 步骤一：选择文件 -->
+  <view class="imp-card" wx:if="{{step === 'idle'}}">
+    <view class="imp-card-header">
+      <text class="imp-card-title">选择表格文件</text>
+    </view>
+    <view class="choose-area {{readonly ? 'disabled' : ''}}" bindtap="chooseFile">
+      <text class="choose-icon">📄</text>
+      <text class="choose-text">从聊天记录选择 .xlsx 文件</text>
+      <text class="choose-hint">解析后会先列出全部记录，确认无误再写入账本</text>
+    </view>
+  </view>
+
+  <!-- 解析中 -->
+  <view class="imp-card parsing-card" wx:if="{{step === 'parsing'}}">
+    <text class="parsing-text">正在解析「{{fileName}}」...</text>
+    <text class="parsing-hint">按日期从左往右扫描月块，请稍候</text>
+  </view>
+
+  <!-- 步骤二：预览确认 -->
+  <block wx:if="{{step === 'preview' || step === 'importing' || step === 'done'}}">
+    <view class="imp-card">
+      <view class="imp-card-header">
+        <text class="imp-card-title">解析结果</text>
+        <text class="imp-card-extra">{{fileName}}</text>
+      </view>
+
+      <view class="summary-row">
+        <view class="summary-cell">
+          <text class="summary-value">{{total}}</text>
+          <text class="summary-label">识别到</text>
+        </view>
+        <view class="summary-cell">
+          <text class="summary-value warning">{{duplicateCount}}</text>
+          <text class="summary-label">疑似重复</text>
+        </view>
+        <view class="summary-cell">
+          <text class="summary-value primary">{{checkedCount}}</text>
+          <text class="summary-label">已勾选</text>
+        </view>
+        <view class="summary-cell">
+          <text class="summary-value expense">¥{{totalAmountText}}</text>
+          <text class="summary-label">合计</text>
+        </view>
+      </view>
+
+      <view class="overflow-tip" wx:if="{{truncated}}">
+        <text>记录过多，本次仅展示前 5000 条</text>
+      </view>
+
+      <view class="warn-block" wx:if="{{warnings.length}}">
+        <text class="warn-title">解析提示（{{warnings.length}} 条）</text>
+        <text class="warn-item" wx:for="{{warnings}}" wx:key="*this">{{item}}</text>
+      </view>
+
+      <view class="batch-actions">
+        <text class="batch-btn" bindtap="selectAll">全选</text>
+        <text class="batch-btn" bindtap="selectNonDuplicate">仅选非重复</text>
+        <text class="batch-btn" bindtap="deselectAll">全部不选</text>
+      </view>
+    </view>
+
+    <!-- 记录列表 -->
+    <view class="imp-card">
+      <view class="record-list">
+        <view
+          class="record-item {{item.checked ? '' : 'unchecked'}}"
+          wx:for="{{records}}"
+          wx:key="index"
+          data-index="{{index}}"
+          bindtap="toggleItem"
+        >
+          <view class="record-check">{{item.checked ? '✓' : ''}}</view>
+          <view class="record-body">
+            <view class="record-line">
+              <text class="record-date">{{item.date}}</text>
+              <text class="record-dup" wx:if="{{item.duplicate}}">疑似重复</text>
+            </view>
+            <view class="record-line">
+              <text class="record-desc">{{item._descText}}</text>
+            </view>
+            <view class="record-line">
+              <text class="record-category">{{item._categoryName}}</text>
+              <text class="record-type {{item._typeLabel === '收入' ? 'income' : ''}}">{{item._typeLabel}}</text>
+            </view>
+          </view>
+          <text class="record-amount {{item._typeLabel === '收入' ? 'income' : 'expense'}}">¥{{item._amountText}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 导入结果 -->
+  <view class="imp-card result-card" wx:if="{{step === 'done' && result}}">
+    <view class="result-icon">✓</view>
+    <text class="result-title">导入完成</text>
+    <text class="result-detail">成功 {{result.inserted}} 条，跳过 {{result.skipped}} 条</text>
+    <view class="result-actions">
+      <view class="imp-btn-outline result-btn" bindtap="reSelect">再导一份</view>
+      <view class="imp-btn-primary result-btn" bindtap="goBack">返回查看账本</view>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view
+    class="imp-btn-primary import-btn {{checkedCount === 0 || readonly ? 'disabled' : ''}}"
+    wx:if="{{step === 'preview'}}"
+    bindtap="doImport"
+  >
+    确认导入 {{checkedCount}} 条 · ¥{{totalAmountText}}
+  </view>
+  <view class="imp-btn-primary import-btn disabled" wx:if="{{step === 'importing'}}">正在导入...</view>
+</view>

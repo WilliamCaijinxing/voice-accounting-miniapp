@@ -8,6 +8,7 @@ const MAX_LIMIT = 100; // 单次查询上限
 const CONCURRENCY = 4; // 分页并发上限：避免一次性 N 个请求打满连接导致云函数超时
 const MAX_EXPORT = 20000; // 单次导出条数上限，防止超大账本打爆内存
 const { guardLedgerAccess, ROLE_EDITOR } = require('./ledger-guard');
+const { buildWorkbook } = require('./xiaoyang-export');
 
 /**
  * CSV 转义：字段中含逗号/引号/换行时需要加引号
@@ -82,11 +83,73 @@ async function fetchAllExpenses(openid, startDate, endDate, ledgerId) {
   return all;
 }
 
+/**
+ * 拉取预算（元），写入月块的「月计划支出」便签
+ * 失败一律返回空对象：预算只是装饰性信息，不该因为它阻断导出
+ */
+async function fetchBudgets(openid, ledgerId) {
+  const _ = db.command;
+  try {
+    const where = ledgerId
+      ? { ledgerId }
+      : { _openid: openid, ledgerId: _.exists(false) };
+    const res = await db.collection('budgets').where(where).limit(100).get();
+    const map = {};
+    (res.data || []).forEach((b) => {
+      if (b.ym && b.amount) map[b.ym] = b.amount / 100;
+    });
+    return map;
+  } catch (err) {
+    console.warn('[exportData] 读取预算失败，月计划便签留空:', err && err.message);
+    return {};
+  }
+}
+
+/**
+ * 生成「小羊记账」版式的 xlsx 并上传云存储
+ */
+async function exportXlsxFile(openid, expenses, ledgerId) {
+  const list = Array.isArray(expenses) ? expenses : [];
+  const incomes = list.filter((e) => e.type === 'income');
+  const expenseList = list.filter((e) => e.type !== 'income');
+  const budgetsByYm = await fetchBudgets(openid, ledgerId);
+
+  const buffer = await buildWorkbook({
+    expenses: expenseList,
+    incomes,
+    budgetsByYm,
+  });
+
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const cloudPath = `exports/xiaoyang_${dateStr}_${openid.slice(-6)}.xlsx`;
+  const uploadRes = await cloud.uploadFile({ cloudPath, fileContent: buffer });
+  console.log('[exportData] xlsx 导出完成 fileID:', uploadRes.fileID);
+
+  let totalExpense = 0;
+  let totalIncome = 0;
+  list.forEach((e) => {
+    if (e.type === 'income') totalIncome += e.amount;
+    else totalExpense += e.amount;
+  });
+
+  return {
+    code: 0,
+    data: {
+      count: list.length,
+      fileID: uploadRes.fileID,
+      totalExpense: toYuan(totalExpense),
+      totalIncome: toYuan(totalIncome),
+      // 前端据此提示子表构成（每个有数据的年份一个支出子表 + 收入子表）
+      years: Array.from(new Set(list.map((e) => String(e.date || '').slice(0, 4)).filter(Boolean))).sort(),
+    },
+  };
+}
+
 exports.main = async (event) => {
   const { action, startDate, endDate, ledgerId } = event;
   const { OPENID } = cloud.getWXContext();
 
-  if (action !== 'exportCSV') {
+  if (action !== 'exportCSV' && action !== 'exportXLSX') {
     return { code: -1, message: 'Unknown action' };
   }
 
@@ -108,6 +171,11 @@ exports.main = async (event) => {
 
     if (expenses.length === 0) {
       return { code: 0, data: { count: 0, message: '暂无账单数据可导出' } };
+    }
+
+    // 小羊版式 xlsx：数据已取到，直接渲染版式并上传
+    if (action === 'exportXLSX') {
+      return await exportXlsxFile(OPENID, expenses, ledgerId);
     }
 
     // 共享账本：建立 openid → 昵称 映射，CSV 增加「记账人」列

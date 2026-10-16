@@ -4,13 +4,23 @@
   <view class="export-hero">
     <text class="export-hero-icon">📤</text>
     <text class="export-hero-title">导出账本</text>
-    <text class="export-hero-desc">导出为 CSV 格式，可用 Excel、WPS、Numbers 打开</text>
+    <text class="export-hero-desc">导出为「小羊记账」版式 Excel：每年一个工作表，按月块记录每天开销</text>
   </view>
 
   <!-- 当前导出账本提示 -->
   <view class="ledger-tip">
     <text class="ledger-tip-icon">{{currentLedgerName ? '📒' : ''}}</text>
     <text class="ledger-tip-text">正在导出：{{currentLedgerName}}</text>
+  </view>
+
+  <!-- 导入入口：把表格数据倒回账本（先预览确认，避免一次性改错整本账） -->
+  <view class="card import-entry" bindtap="goImport">
+    <view class="import-entry-icon">📥</view>
+    <view class="import-entry-body">
+      <text class="import-entry-title">导入表格数据</text>
+      <text class="import-entry-desc">把表格里的记录导入当前账本，导入前可逐条确认</text>
+    </view>
+    <text class="import-entry-arrow">›</text>
   </view>
 
   <!-- 时间范围选择 -->
@@ -59,7 +69,7 @@
     <view class="file-guide">
       <view class="file-guide-title">📁 文件在哪里？</view>
       <view class="file-guide-text">
-        CSV 保存在小程序本地目录，手机文件管理无法直接查看。推荐「转发到微信」发到文件传输助手，或「复制下载链接」在电脑浏览器打开。
+        Excel 可用「转发到微信」发到文件传输助手，或「复制下载链接」在电脑浏览器下载后打开。表格按年份分工作表，便于长期存档。
       </view>
 
       <view class="file-actions">
@@ -87,6 +97,6 @@
   </view>
 
   <view class="export-note">
-    <text>💡 提示：导出的 CSV 文件包含日期、类型、分类、金额、描述等完整字段，方便你在电脑上进行二次统计和分析。</text>
+    <text>💡 表格说明：支出按「月块」排版（日期 / 开销 / 日合 / 周合 / 年度汇总），收入单独一个「年收入」工作表。这个文件也能直接再次导入小程序。</text>
   </view>
 </view>

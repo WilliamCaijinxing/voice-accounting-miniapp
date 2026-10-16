@@ -188,8 +188,21 @@ const ledgerAPI = {
  * 导出 API
  */
 const exportAPI = {
-  // 导出 CSV
+  // 「小羊记账」版式 xlsx（默认入口；每年一个支出子表 + 收入子表）
+  exportXLSX: (params) => callCloud('exportData', { action: 'exportXLSX', ...params }),
+  // CSV 保留服务端能力：结构简单，便于程序处理，UI 不再暴露
   exportCSV: (params) => callCloud('exportData', { action: 'exportCSV', ...params }),
+};
+
+/**
+ * 导入 API（两步式：先预览确认，再入库）
+ * parsePreview 会返回表格里解析出的全部记录及疑似重复标记
+ */
+const importAPI = {
+  parsePreview: (fileID, ledgerId) =>
+    callCloud('importData', { action: 'parsePreview', fileID, ledgerId }),
+  confirmImport: (records, ledgerId) =>
+    callCloud('importData', { action: 'confirmImport', records, ledgerId }),
 };
 
 /**
@@ -221,6 +234,7 @@ module.exports = {
   voiceAPI,
   budgetAPI,
   exportAPI,
+  importAPI,
   userAPI,
   ledgerAPI,
   currentLedgerId,

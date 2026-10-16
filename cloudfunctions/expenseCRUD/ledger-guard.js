@@ -68,7 +68,9 @@ function roleAtLeast(role, minRole) {
 /**
  * 账本访问守卫。
  * - ledgerId 为空/未传 → 个人账本语义，直接放行（对自己的账本天然全权）；
- * - ledgerId 不是 24 位 hex 字符串 → 拒绝（阻断 NoSQL 操作符注入，如 {$ne:null}/{$exists:true}）；
+ * - ledgerId 不是 24~32 位 hex 字符串 → 拒绝（阻断 NoSQL 操作符注入，如 {$ne:null}/{$exists:true}）；
+ *   （位数口径来自云开发 _id 的实际生成规则：自动生成的 _id 是 32 位 hex，
+ *   24 位仅用于兼容 Mongo 风格 / 历史导入数据。）
  * - 共享账本 → 校验调用者是该账本创建者或成员，且角色达到 minRole。
  * @param {*} ledgerId 客户端传入的账本 ID（外部可控，绝不信任）
  * @param {string} openid 调用者 openid（来自 getWXContext，可信）

@@ -1,0 +1,388 @@
+/* pages/import/import.wxss */
+
+.import-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-lg) 0;
+}
+
+.import-hero-icon {
+  font-size: 72rpx;
+  margin-bottom: var(--spacing-sm);
+}
+
+.import-hero-title {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.import-hero-desc {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.imp-ledger-tip {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-sm);
+  color: var(--color-text-primary);
+}
+
+.imp-ledger-tip-icon {
+  margin-right: var(--spacing-xs);
+}
+
+.readonly-tip {
+  padding: var(--spacing-md);
+  background: #FFF7E6;
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  color: #A0632B;
+  line-height: 1.6;
+  margin-bottom: var(--spacing-md);
+}
+
+/* 选择文件区 */
+.choose-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border: 2rpx dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.choose-area.disabled {
+  opacity: 0.5;
+}
+
+.choose-icon {
+  font-size: 64rpx;
+}
+
+.choose-text {
+  font-size: var(--font-base);
+  color: var(--color-primary);
+  margin-top: var(--spacing-sm);
+}
+
+.choose-hint {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  margin-top: var(--spacing-xs);
+}
+
+/* 解析中 */
+.parsing-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-lg);
+}
+
+.parsing-text {
+  font-size: var(--font-base);
+  color: var(--color-text-primary);
+}
+
+.parsing-hint {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  margin-top: var(--spacing-xs);
+}
+
+.imp-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+}
+
+.imp-card-title {
+  font-size: var(--font-base);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.imp-card-extra {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+/* 汇总四宫格 */
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1rpx solid var(--color-divider);
+}
+
+.summary-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.summary-value {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.summary-value.primary {
+  color: var(--color-primary);
+}
+
+.summary-value.warning {
+  color: var(--color-warning);
+}
+
+.summary-value.expense {
+  color: var(--color-danger);
+}
+
+.summary-label {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  margin-top: 4rpx;
+}
+
+.overflow-tip {
+  font-size: var(--font-xs);
+  color: var(--color-warning);
+  padding: var(--spacing-xs) 0;
+}
+
+/* 解析提示 */
+.warn-block {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+}
+
+.warn-title {
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+}
+
+.warn-item {
+  display: block;
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  margin-top: 4rpx;
+}
+
+/* 批量操作 */
+.batch-actions {
+  display: flex;
+  margin-top: var(--spacing-md);
+}
+
+.batch-btn {
+  flex: 1;
+  text-align: center;
+  font-size: var(--font-sm);
+  color: var(--color-primary);
+  padding: var(--spacing-xs) 0;
+}
+
+/* 记录列表 */
+.record-list {
+  max-height: 720rpx;
+  overflow-y: auto;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1rpx solid var(--color-divider);
+}
+
+.record-item.unchecked {
+  opacity: 0.45;
+}
+
+.record-check {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 2rpx solid var(--color-primary);
+  color: var(--color-primary);
+  font-size: var(--font-sm);
+  text-align: center;
+  line-height: 36rpx;
+  margin-right: var(--spacing-sm);
+  flex-shrink: 0;
+}
+
+.record-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.record-line {
+  display: flex;
+  align-items: center;
+}
+
+.record-date {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+.record-dup {
+  font-size: 20rpx;
+  color: var(--color-warning);
+  border: 1rpx solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  padding: 0 8rpx;
+  margin-left: var(--spacing-xs);
+}
+
+.record-desc {
+  font-size: var(--font-base);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-category {
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+}
+
+.record-type {
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  margin-left: var(--spacing-xs);
+}
+
+.record-type.income {
+  color: var(--color-primary);
+}
+
+.record-amount {
+  font-size: var(--font-base);
+  font-weight: 500;
+  margin-left: var(--spacing-sm);
+  flex-shrink: 0;
+}
+
+.record-amount.income {
+  color: var(--color-primary);
+}
+
+.record-amount.expense {
+  color: var(--color-danger);
+}
+
+/* 结果 */
+.result-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-lg);
+}
+
+.result-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 48rpx;
+  text-align: center;
+  line-height: 96rpx;
+}
+
+.result-title {
+  font-size: var(--font-lg);
+  color: var(--color-text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.result-detail {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.result-actions {
+  display: flex;
+  width: 100%;
+  margin-top: var(--spacing-lg);
+}
+
+.result-btn {
+  flex: 1;
+  margin: 0 var(--spacing-xs);
+  text-align: center;
+}
+
+.import-btn {
+  margin-top: var(--spacing-lg);
+}
+
+/* ============ 自包含的基础组件样式 ============
+   这些类原本散落在 export / index 等页面的 wxss 里；小程序 wxss 全局生效，
+   跨页面复用在技术上是可行的，但依赖别页文件很脆弱 —— 那边的样式一旦调整，
+   本页就会裸奔。这里按项目现有的设计变量补一份，互不依赖。 */
+.imp-page {
+  padding: var(--spacing-md);
+}
+
+.imp-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.imp-ledger-tip-text {
+  font-size: var(--font-sm);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.imp-btn-primary {
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: linear-gradient(135deg, #07C160, #06AD56);
+  color: #ffffff;
+  font-size: var(--font-base);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+}
+
+.imp-btn-primary.disabled {
+  opacity: 0.5;
+}
+
+.imp-btn-outline {
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: #ffffff;
+  color: var(--color-primary);
+  border: 2rpx solid var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-base);
+}

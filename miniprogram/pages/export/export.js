@@ -88,7 +88,7 @@ Page({
       default:
         period = `全部_${stamp}`;
     }
-    return `${safeName}_账单_${period}.csv`;
+    return `${safeName}_账单_${period}.xlsx`;
   },
 
   async doExport() {
@@ -105,7 +105,8 @@ Page({
 
     try {
       const { startDate, endDate } = this.getRangeDates(this.data.activeRange);
-      const res = await exportAPI.exportCSV({ startDate, endDate, ledgerId });
+      // 「小羊记账」版式 Excel：每年一个支出子表（月块/日合/周合/年度汇总）+ 收入子表
+      const res = await exportAPI.exportXLSX({ startDate, endDate, ledgerId });
       wx.hideLoading();
       this.setData({ result: res, exporting: false });
 
@@ -145,7 +146,7 @@ Page({
         fileID,
         success: (res) => {
           const fs = wx.getFileSystemManager();
-          const savePath = `${wx.env.USER_DATA_PATH}/ledger_export.csv`;
+          const savePath = `${wx.env.USER_DATA_PATH}/ledger_export.xlsx`;
           try {
             fs.saveFileSync(res.tempFilePath, savePath);
             resolve(savePath);
@@ -180,7 +181,7 @@ Page({
     wx.shareFileMessage({
       filePath,
       // 用导出时算好的带区间文件名，避免不同区间的导出在微信里同名互相覆盖
-      fileName: this.data.fileName || `${this.data.currentLedgerName || '我的账本'}_账单.csv`,
+      fileName: this.data.fileName || `${this.data.currentLedgerName || '我的账本'}_账单.xlsx`,
       success: () => {},
       fail: (err) => {
         console.error('shareFileMessage fail:', err);
@@ -205,6 +206,11 @@ Page({
     });
   },
 
+  /** 跳转导入页 */
+  goImport() {
+    wx.navigateTo({ url: '/pages/import/import' });
+  },
+
   /** 复制小程序内保存路径（便于排查） */
   copyPath() {
     if (!this.data.localPath) {
@@ -226,13 +232,13 @@ Page({
     }
     wx.openDocument({
       filePath,
-      fileType: 'csv',
+      fileType: 'xlsx',
       showMenu: true,   // 右上角菜单可转发/保存
       success: () => {},
       fail: () => {
         wx.showModal({
           title: '无法在小程序内预览',
-          content: 'CSV 不支持在小程序中直接打开。建议「转发到微信」发到文件传输助手，或用「复制下载链接」在电脑浏览器打开。',
+          content: '建议在电脑/手机上用 Excel 或 WPS 打开。可用「转发到微信」发到文件传输助手，或用「复制下载链接」在浏览器下载。',
           showCancel: false,
         });
       },

@@ -1,0 +1,10 @@
+{
+  "name": "importData",
+  "version": "1.0.0",
+  "description": "从「小羊记账」版式 xlsx 导入账本数据（预览 + 确认）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "exceljs": "^4.4.0"
+  }
+}
