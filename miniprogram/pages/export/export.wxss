@@ -35,7 +35,7 @@
   display: flex;
   align-items: center;
   background: var(--color-primary-soft, rgba(7,193,96,0.12));
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   padding: 18rpx 24rpx;
   margin-bottom: var(--spacing-md);
 }
@@ -59,7 +59,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 24rpx var(--spacing-md);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   margin-bottom: 12rpx;
   background: var(--color-bg-page);
 }
@@ -128,7 +128,7 @@
 /* ============ 按钮 ============ */
 .btn-primary {
   height: 88rpx;
-  border-radius: 44rpx;
+  border-radius: var(--radius-round);
   background: linear-gradient(135deg, #07C160, #06AD56);
   color: #FFFFFF;
   font-size: var(--font-base);
@@ -136,7 +136,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+  box-shadow: var(--shadow-primary);
 }
 
 .btn-primary.disabled {
@@ -158,7 +158,7 @@
   margin-top: var(--spacing-md);
   padding: var(--spacing-md);
   background: rgba(7, 193, 96, 0.06);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
 }
 
 .file-guide-title {
@@ -183,7 +183,7 @@
 .file-btn {
   flex: 1;
   height: 76rpx;
-  border-radius: 38rpx;
+  border-radius: var(--radius-round);
   font-size: var(--font-sm);
   font-weight: 600;
   display: flex;
@@ -251,7 +251,7 @@
   margin-top: var(--spacing-lg);
   padding: var(--spacing-md);
   background: rgba(7, 193, 96, 0.06);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   font-size: var(--font-xs);
   color: var(--color-text-secondary);
   line-height: 1.6;

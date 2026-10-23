@@ -9,7 +9,7 @@
 
 .tbx-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   margin: var(--spacing-sm) var(--spacing-md);
   box-shadow: var(--shadow-sm);
@@ -164,7 +164,7 @@
   width: 30%;
   max-width: 22rpx;
   min-width: 6rpx;
-  border-radius: 4rpx 4rpx 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
 }
 
 .tbx-bar.income { background: var(--color-income); }
@@ -210,8 +210,8 @@
   padding: 16rpx 20rpx 12rpx;
   background: var(--color-bg-card);
   border: 1rpx solid #EBEBEB;
-  border-radius: 12rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   z-index: 10;
 }
 

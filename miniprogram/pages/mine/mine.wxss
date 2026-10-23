@@ -9,11 +9,11 @@
   margin: var(--spacing-md);
   padding: var(--spacing-lg) var(--spacing-md);
   background: linear-gradient(135deg, #07C160, #06AD56);
-  border-radius: 24rpx;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.25);
+  box-shadow: var(--shadow-primary);
 }
 
 .user-avatar-wrap {
@@ -46,7 +46,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-ring);
 }
 
 .user-info {
@@ -81,7 +81,7 @@
 .user-edit-btn {
   flex-shrink: 0;
   padding: 12rpx 24rpx;
-  border-radius: 28rpx;
+  border-radius: var(--radius-round);
   background: rgba(255, 255, 255, 0.9);
   color: #07C160;
   font-size: var(--font-sm);
@@ -158,14 +158,14 @@
 
 .budget-mini-track {
   height: 12rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-round);
   background: var(--color-divider);
   overflow: hidden;
 }
 
 .budget-mini-fill {
   height: 100%;
-  border-radius: 6rpx;
+  border-radius: var(--radius-round);
   background: linear-gradient(90deg, #07C160, #06AD56);
 }
 
@@ -228,7 +228,7 @@
   margin: var(--spacing-md);
   padding: var(--spacing-lg) var(--spacing-md) var(--spacing-md);
   background: var(--color-bg-card);
-  border-radius: 24rpx;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;

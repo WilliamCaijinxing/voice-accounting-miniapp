@@ -5,6 +5,10 @@ page {
   --color-primary: #07C160;
   --color-primary-dark: #06AD56;
   --color-primary-light: #E8F8EF;
+  /* 主色浅底：徽标、提示块、按钮的弱化背景。
+     补定义之前 ledger / export 共 6 处写了 var(--color-primary-soft, 兜底值)，
+     token 始终不存在 → 一直在吃兜底值，改主题时这 6 处不会跟着变。 */
+  --color-primary-soft: rgba(7, 193, 96, 0.12);
   --color-danger: #FA5151;
   --color-warning: #FFC300;
   --color-income: #07C160;
@@ -17,16 +21,43 @@ page {
 
   --color-bg-page: #F6F6F6;
   --color-bg-card: #FFFFFF;
+  /* 按下/选中态的背景（日历格、分段器选中）
+     原先 statistics 写的是不存在的 var(--color-bg-active, ...)，同样在吃兜底值 */
+  --color-bg-active: rgba(0, 0, 0, 0.04);
   --color-border: #EEEEEE;
   --color-divider: #F0F0F0;
 
+  /* ---- 圆角阶梯 ----
+     收敛前全站散着 25 个不同的圆角值（2/4/6/8/10/12/16/20/24/28/30/32/38/40/42/44/999…），
+     同一个角色在不同页面差 8rpx —— 看起来"不齐"，但样式不会报错，所以一直没被发现。
+     现在只保留 4 档 + 1 个胶囊。判档规则按"元素面积"，不按页面：
+       xs    微标记：图例点、柱状图柱顶、细色块
+       sm    小控件：日历格、分段器内格、小标签
+       md    控件 / 有色底的提示块：按钮、输入框、列表项、绿色浅底提示条
+       lg    白底卡片：所有页面级卡片、白底横幅、底部弹层
+       round 胶囊：半径 >= 高度一半的元素一律用它，将来改高度也不会变形
+     一句话记法：**白底的块统一 lg，有色底的块和控件用 md**，
+     这样同一屏里不会出现 16 与 24 混排的"差一点点"。 */
+  --radius-xs: 4rpx;
   --radius-sm: 8rpx;
   --radius-md: 16rpx;
   --radius-lg: 24rpx;
   --radius-round: 9999rpx;
 
-  --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+  /* ---- 阴影阶梯 ----
+     单层阴影只有一种扩散半径，要么显得发灰（太小），要么显得发飘（太大）。
+     这里统一成双层：贴地近影负责"接触感"，扩散远影负责"高度感"。
+     色相取 rgba(17,24,20)，带一点点绿的黑，跟主色同调子，比纯黑干净。 */
+  --shadow-sm: 0 2rpx 8rpx rgba(17, 24, 20, 0.04), 0 1rpx 2rpx rgba(17, 24, 20, 0.03);
+  --shadow-md: 0 6rpx 20rpx rgba(17, 24, 20, 0.07), 0 2rpx 6rpx rgba(17, 24, 20, 0.04);
+  --shadow-lg: 0 12rpx 40rpx rgba(17, 24, 20, 0.1), 0 4rpx 12rpx rgba(17, 24, 20, 0.05);
+  /* 吸底操作栏：只往上投，投在下面会露出白边 */
+  --shadow-top: 0 -2rpx 12rpx rgba(17, 24, 20, 0.05);
+  /* 主色光晕：主按钮 / 语音球形按钮 */
+  --shadow-primary: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+  --shadow-primary-lg: 0 12rpx 40rpx rgba(7, 193, 96, 0.42);
+  /* 描边环：只有形状没有扩散，用于叠在图片上的小徽标（阴影会糊、描边才干净） */
+  --shadow-ring: 0 0 0 1rpx rgba(17, 24, 20, 0.1);
 
   --font-xs: 22rpx;
   --font-sm: 26rpx;
@@ -92,14 +123,15 @@ page {
 /* Card pattern */
 .card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   margin: var(--spacing-sm) var(--spacing-md);
   box-shadow: var(--shadow-sm);
 }
 
 /* 加载失败提示条（首页 / 统计页共用）
-   目的：网络异常时页面不再静默停留在上一轮数据，而是明确告知并提供重试 */
+   目的：网络异常时页面不再静默停留在上一轮数据，而是明确告知并提供重试
+   它是白底、带页面级外边距的块，视觉上就是一张卡，所以圆角跟卡片同级 */
 .load-error {
   display: flex;
   align-items: center;
@@ -108,7 +140,7 @@ page {
   padding: var(--spacing-sm) var(--spacing-md);
   background: var(--color-bg-card);
   border: 1rpx solid var(--color-warning);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
 }
 
 .load-error-text {

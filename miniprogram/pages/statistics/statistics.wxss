@@ -7,7 +7,7 @@
   padding: 16rpx var(--spacing-md);
   margin: var(--spacing-sm) var(--spacing-md) 0;
   background: var(--color-bg-card);
-  border-radius: 16rpx;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
 .ledger-indicator-icon {
@@ -40,7 +40,7 @@
   flex: 1;
   text-align: center;
   padding: 14rpx 0;
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   background: var(--color-bg-card);
   color: var(--color-text-secondary);
   font-size: var(--font-sm);
@@ -203,7 +203,7 @@
 .legend-dot {
   width: 14rpx;
   height: 14rpx;
-  border-radius: 4rpx;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
 }
 
@@ -246,14 +246,14 @@
 
 .budget-bar-track {
   height: 16rpx;
-  border-radius: 8rpx;
+  border-radius: var(--radius-round);
   background: var(--color-divider);
   overflow: hidden;
 }
 
 .budget-bar-fill {
   height: 100%;
-  border-radius: 8rpx;
+  border-radius: var(--radius-round);
   background: linear-gradient(90deg, #07C160, #06AD56);
   transition: width 0.4s ease;
 }
@@ -366,7 +366,7 @@
   align-items: center;
   padding: 6rpx 0;
   box-sizing: border-box;
-  border-radius: 10rpx;
+  border-radius: var(--radius-sm);
 }
 
 .cal-cell.empty {
@@ -496,7 +496,7 @@
 .line-seg {
   position: absolute;
   height: 4rpx;
-  border-radius: 2rpx;
+  border-radius: var(--radius-round);
   background: #C8C9CC;
   transform-origin: 0 50%;
 }
@@ -551,8 +551,8 @@
   display: flex;
   gap: 8rpx;
   margin-bottom: var(--spacing-sm);
-  background: var(--color-bg, #F6F6F6);
-  border-radius: 12rpx;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-md);
   padding: 4rpx;
 }
 
@@ -560,7 +560,7 @@
   flex: 1;
   text-align: center;
   padding: 10rpx 0;
-  border-radius: 10rpx;
+  border-radius: var(--radius-sm);
   font-size: var(--font-sm);
   color: var(--color-text-secondary);
 }
@@ -595,7 +595,7 @@
   width: 100%;
   max-height: 75vh;
   background: #FFFFFF;
-  border-radius: 28rpx 28rpx 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   padding: var(--spacing-md);
   box-sizing: border-box;
   display: flex;

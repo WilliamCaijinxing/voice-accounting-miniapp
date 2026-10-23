@@ -61,7 +61,7 @@
   margin-top: var(--spacing-sm);
   padding: 20rpx 24rpx;
   background: var(--color-bg-page);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
 }
 
 .input-prefix {
@@ -87,7 +87,7 @@
   margin-top: var(--spacing-sm);
   padding: var(--spacing-md);
   background: rgba(7, 193, 96, 0.06);
-  border-radius: 16rpx;
+  border-radius: var(--radius-md);
   font-size: var(--font-xs);
   color: var(--color-text-secondary);
   line-height: 1.6;
@@ -96,7 +96,7 @@
 /* ============ 保存按钮 ============ */
 .btn-primary {
   height: 88rpx;
-  border-radius: 44rpx;
+  border-radius: var(--radius-round);
   background: linear-gradient(135deg, #07C160, #06AD56);
   color: #FFFFFF;
   font-size: var(--font-md);
@@ -104,7 +104,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+  box-shadow: var(--shadow-primary);
 }
 
 .btn-primary.disabled {

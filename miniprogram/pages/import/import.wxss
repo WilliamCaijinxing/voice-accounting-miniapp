@@ -346,7 +346,7 @@
 
 .imp-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
   box-shadow: var(--shadow-sm);
@@ -360,7 +360,7 @@
 
 .imp-btn-primary {
   height: 88rpx;
-  border-radius: 44rpx;
+  border-radius: var(--radius-round);
   background: linear-gradient(135deg, #07C160, #06AD56);
   color: #ffffff;
   font-size: var(--font-base);
@@ -368,7 +368,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+  box-shadow: var(--shadow-primary);
 }
 
 .imp-btn-primary.disabled {
@@ -377,7 +377,7 @@
 
 .imp-btn-outline {
   height: 88rpx;
-  border-radius: 44rpx;
+  border-radius: var(--radius-round);
   background: #ffffff;
   color: var(--color-primary);
   border: 2rpx solid var(--color-primary);

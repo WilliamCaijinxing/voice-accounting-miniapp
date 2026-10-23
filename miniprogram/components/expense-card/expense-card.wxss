@@ -84,7 +84,7 @@
   color: var(--color-primary, #07C160);
   background: var(--color-primary-light, #E8F8EF);
   padding: 1rpx 10rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius-sm);
   max-width: 150rpx;
   overflow: hidden;
   text-overflow: ellipsis;
