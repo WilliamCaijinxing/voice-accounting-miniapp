@@ -7,10 +7,14 @@
  *   靠颜色和滑块的位移表达状态，比加粗更干净。
  *
  * 下面几个数字是从参考图按比例量出来的，改动前先看这行比例，别凭手感调：
- *   滑块高 / 轨道高     = 1.16   （56 / 48）
- *   轨道高 / 字号       = 1.85   （48 / 26）—— 这个比值决定「松不松」，
+ *   滑块高 / 轨道高     = 1.15   （60 / 52）
+ *   轨道高 / 字号       = 2.0    （52 / 26）—— 这个比值决定「松不松」，
  *                                  偏大就会变成文字缩在一个空荡荡的胶囊里
- *   左右内边距 / 字号   = 0.77   （20 / 26）
+ *   左右内边距 / 字号   = 0.85   （22 / 26）
+ *
+ * 轨道高度没有按参考图等比缩到底：参考图轨道约 34pt，等比缩到 26rpx 字号只有
+ * 45rpx（22.5pt），滑块就不到 30pt 高了，点起来偏小。52 / 60rpx（26pt / 30pt）
+ * 是「看着像参考图」和「手指够点」之间的折中，iOS 系统分段器本身也是 32pt。
  *
  * 这份样式被页面（statistics）和组件（category-pie）同时使用，所以抽成外联文件。
  * 两边都用 @import 引入：在页面里它就是页面作用域，在组件里就是组件作用域，
@@ -26,7 +30,7 @@
 .seg {
   display: inline-flex;
   align-items: center;
-  height: 48rpx;
+  height: 52rpx;
   padding: 0 4rpx;
   background: var(--color-bg-track);
   border-radius: var(--radius-round);
@@ -41,9 +45,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 56rpx > 轨道 48rpx，上下各溢出 4rpx：这是还原参考图的关键一处 */
-  height: 56rpx;
-  padding: 0 20rpx;
+  /* 60rpx > 轨道 52rpx，上下各溢出 4rpx：这是还原参考图的关键一处 */
+  height: 60rpx;
+  padding: 0 22rpx;
   border-radius: var(--radius-round);
   font-size: var(--font-sm);
   line-height: 1;
