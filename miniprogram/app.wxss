@@ -129,6 +129,22 @@ page {
   box-shadow: var(--shadow-sm);
 }
 
+/* Card header —— 卡片内的标题行。
+   原来只在 index.wxss 里定义，但 budget / export 也在用同名类；小程序的页面 wxss 互相隔离，
+   于是那两个页面的卡片标题一直没生效（无边框分割线、字号回落成默认）。 */
+.card-header {
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1rpx solid var(--color-divider);
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-title { font-size: var(--font-base); font-weight: 600; }
+
+.card-link {
+  font-size: var(--font-sm);
+  color: var(--color-primary);
+}
+
 /* 加载失败提示条（首页 / 统计页共用）
    目的：网络异常时页面不再静默停留在上一轮数据，而是明确告知并提供重试
    它是白底、带页面级外边距的块，视觉上就是一张卡，所以圆角跟卡片同级 */

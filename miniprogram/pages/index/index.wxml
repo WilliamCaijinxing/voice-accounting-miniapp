@@ -15,7 +15,7 @@
       bindtap="switchLedger"
     >
       <text class="ledger-chip-icon">{{item.type === 'shared' ? '👥' : '📒'}}</text>
-      <text class="ledger-chip-name">{{item.name}}</text>
+      <text>{{item.name}}</text>
     </view>
   </scroll-view>
   <view class="ledger-manage" bindtap="goToLedger">管理 ›</view>
@@ -221,7 +221,7 @@
 </view>
 
 <!-- 本月账本卡（原「预算卡」+「月概览卡」合并） -->
-<view class="card month-card" wx:if="{{monthStats}}">
+<view class="card" wx:if="{{monthStats}}">
   <view class="card-header flex-between">
     <text class="card-title">{{currentMonth}}月账本</text>
     <text class="card-link" bindtap="goToStats">查看详情 ›</text>
@@ -271,7 +271,7 @@
 </view>
 
 <!-- 最近账单 -->
-<view class="card recent-card">
+<view class="card">
   <view class="card-header flex-between">
     <text class="card-title">最近账单</text>
     <!-- 总数取自服务端 count；此处列表只展示最近 10 条，不能用 recentList.length 当总数 -->
