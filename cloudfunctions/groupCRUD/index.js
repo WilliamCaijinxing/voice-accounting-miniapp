@@ -6,6 +6,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 const LEDGER_COLL = 'ledgers';
+const USERS_COLL = 'users';
 // roleOf / isValidRole / 角色常量来自守卫（唯一事实源，随本函数一同部署）
 const { roleOf, isValidRole, ROLE_OWNER, ROLE_EDITOR, ROLE_VIEWER } = require('./ledger-guard');
 
@@ -157,6 +158,45 @@ function isMember(ledger, openid) {
 }
 
 /**
+ * 用 users 集合的当前昵称补齐 members 里的空快照。
+ *
+ * 为什么需要：ledgers.members[].nickname 是「加入那一刻」的快照。早期三个入账本的入口
+ * 写的都是微信授权返回的 nickName 字段，而 users 集合里实际叫 nickname —— 于是那批
+ * 老成员的快照全是空串。首页 / 账单详情按 openid 映射昵称时拿不到值，一律落到「成员」，
+ * 用户改完昵称也还是「成员」，看起来像改名没生效。
+ *
+ * 口径：快照有值就保留（可能是成员在账本里的自定义称谓），空了才用 users 的当前昵称兜。
+ * 只读不改库 —— 整数组回写会和「改角色」这类并发写互相覆盖，得不偿失。
+ */
+async function fillMemberNicknames(members) {
+  const list = Array.isArray(members) ? members : [];
+  const pending = list.filter((m) => m && m.openid && !m.nickname);
+  if (!pending.length) return list;
+
+  try {
+    const res = await db.collection(USERS_COLL)
+      .where({ _openid: _.in(pending.map((m) => m.openid)) })
+      .limit(100)
+      .get();
+
+    const nameMap = {};
+    (res.data || []).forEach((u) => {
+      if (u && u._openid && u.nickname) nameMap[u._openid] = u.nickname;
+    });
+
+    return list.map((m) => (
+      m && m.openid && !m.nickname && nameMap[m.openid]
+        ? { ...m, nickname: nameMap[m.openid] }
+        : m
+    ));
+  } catch (err) {
+    // 补不上不影响主流程：前端会退化成「成员」，至少账本能正常打开
+    console.error('Fill member nicknames error:', err);
+    return list;
+  }
+}
+
+/**
  * 创建共享账本
  */
 async function createLedger(openid, { name, nickname, avatar }) {
@@ -250,9 +290,10 @@ async function getLedgerDetail(openid, { ledgerId }) {
         _id: ledger._id,
         name: ledger.name,
         ownerOpenid: ledger.ownerOpenid,
-        // 成员角色统一经 roleOf 归一（存量成员的 'member'/缺失值都会落成 editor），
+        // 成员昵称先补齐空快照（见 fillMemberNicknames），再统一经 roleOf 归一
+        // （存量成员的 'member'/缺失值都会落成 editor），
         // 前端可直接按 role 渲染，不必自己猜缺省语义
-        members: (ledger.members || []).map((m) => ({
+        members: (await fillMemberNicknames(ledger.members)).map((m) => ({
           ...m,
           role: roleOf(ledger, m.openid) || ROLE_EDITOR,
         })),
