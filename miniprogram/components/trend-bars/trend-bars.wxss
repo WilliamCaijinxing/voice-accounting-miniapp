@@ -201,17 +201,23 @@
 /* 浮层贴在指示线的「外侧」：左半区的组往右放，右半区的组往左放，
    这样它永远不压住用户正在看的那组柱子。
    28rpx 的间距必须大于柱组半宽（最大 2×22rpx + 4rpx，半宽 24rpx），
-   否则极窄的年份视图里仍会蹭到边柱。 */
+   否则极窄的年份视图里仍会蹭到边柱。
+   底色半透明 + 磨砂：即使浮层和别的柱子重叠，柱子也要透出来 ——
+   完全不透明时用户会失去"我现在在整张图的哪个位置"的参照。
+   0.78 是平衡点：再高就开始挡视线，再低文字会发灰。
+   iOS 走 backdrop-filter 磨砂，Android WebView 不支持时会退化成纯半透明，两种都可读。 */
 .tbx-tooltip {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   min-width: 240rpx;
   padding: 16rpx 20rpx 12rpx;
-  background: var(--color-bg-card);
-  border: 1rpx solid #EBEBEB;
+  background: rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: blur(20rpx);
+  backdrop-filter: blur(20rpx);
+  border: 1rpx solid rgba(17, 24, 20, 0.07);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
   z-index: 10;
 }
 
@@ -261,7 +267,8 @@
   display: block;
   margin-top: 8rpx;
   padding-top: 8rpx;
-  border-top: 1rpx solid var(--color-divider);
+  /* 分隔线走半透明：白底 token 压在磨砂玻璃上看不见 */
+  border-top: 1rpx solid rgba(17, 24, 20, 0.08);
   font-size: 20rpx;
   color: var(--color-primary);
   text-align: right;
