@@ -106,14 +106,15 @@
 
 <!-- ==================== 月视图 ==================== -->
 <block wx:if="{{activeRange === 'month'}}">
-  <!-- 月度收支趋势：支出/收入双条 + 金额独立成列 -->
+  <!-- 月度收支趋势：收入/支出分组柱 + Y 轴刻度，点柱子弹浮层 -->
   <trend-bars
     title="📈 月度收支趋势"
     list="{{monthBars}}"
+    y-ticks="{{monthYTicks}}"
     nav-title="{{monthTitle}}"
     next-disabled="{{monthOffset <= 0}}"
-    tip="点击任意一行查看该月支出分类 · ‹ › 翻页查看更早历史"
-    tappable="{{true}}"
+    show-detail-link="{{true}}"
+    tip="点击柱子查看当月数字 · 浮层里可看支出分类 · ‹ › 翻页查看更早历史"
     empty-icon="📈"
     empty-text="暂无月度数据"
     bind:itemtap="tapMonthBar"
@@ -125,6 +126,7 @@
   <trend-bars
     title="📊 近12周收支"
     list="{{recentWeeks}}"
+    y-ticks="{{recentYTicks}}"
     tip="最近 12 周的支出与收入对比"
     empty-icon="📊"
     empty-text="暂无周数据"
@@ -179,6 +181,7 @@
   <trend-bars
     title="📊 年度收支趋势"
     list="{{yearBars}}"
+    y-ticks="{{yearYTicks}}"
     tip="历年总支出与总收入对比"
     empty-icon="📊"
     empty-text="暂无年度数据"

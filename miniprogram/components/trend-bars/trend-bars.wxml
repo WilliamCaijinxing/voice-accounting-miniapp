@@ -1,15 +1,15 @@
-<!-- components/trend-bars/trend-bars.wxml — 横向收支条形图 -->
+<!-- components/trend-bars/trend-bars.wxml — 竖向分组柱状图（收入/支出双柱 + Y 轴刻度 + 点选浮层） -->
 <view class="tbx-card">
   <view class="tbx-header">
     <text class="tbx-title">{{title}}</text>
     <view class="tbx-legend">
       <view class="tbx-legend-item">
-        <view class="tbx-legend-dot expense"></view>
-        <text class="tbx-legend-text">支出</text>
-      </view>
-      <view class="tbx-legend-item">
         <view class="tbx-legend-dot income"></view>
         <text class="tbx-legend-text">收入</text>
+      </view>
+      <view class="tbx-legend-item">
+        <view class="tbx-legend-dot expense"></view>
+        <text class="tbx-legend-text">支出</text>
       </view>
     </view>
   </view>
@@ -21,30 +21,78 @@
     <view class="tbx-nav-btn {{nextDisabled ? 'is-disabled' : ''}}" bindtap="onNext">›</view>
   </view>
 
-  <block wx:if="{{list.length > 0}}">
-    <view
-      wx:for="{{list}}"
-      wx:key="key"
-      class="tbx-row {{tappable ? 'is-tappable' : ''}}"
-      data-index="{{index}}"
-      bindtap="onRowTap"
-    >
-      <text class="tbx-row-label">{{item.label}}</text>
-      <view class="tbx-row-body">
-        <view class="tbx-line">
-          <view class="tbx-track">
-            <view class="tbx-bar expense" style="width: {{item.expPct}}%;"></view>
-          </view>
-          <text class="tbx-amount {{item._zeroExpense ? 'is-zero' : ''}}">{{item._fmtExpense}}</text>
+  <block wx:if="{{!empty}}">
+    <view class="tbx-plot">
+      <!-- Y 轴刻度 -->
+      <view class="tbx-yaxis">
+        <text
+          wx:for="{{yTicks}}"
+          wx:key="key"
+          class="tbx-ytick"
+          style="top: {{item.pct}}%;"
+        >{{item.label}}</text>
+      </view>
+
+      <!-- 绘图区 -->
+      <view class="tbx-body" bindtap="onPlotTap">
+        <!-- 横向虚线网格：5 条，与 Y 轴刻度一一对应 -->
+        <view class="tbx-grid">
+          <view
+            wx:for="{{yTicks}}"
+            wx:key="key"
+            class="tbx-gridline {{item.isBase ? 'is-base' : ''}}"
+            style="top: {{item.pct}}%;"
+          ></view>
         </view>
-        <view class="tbx-line">
-          <view class="tbx-track">
-            <view class="tbx-bar income" style="width: {{item.incPct}}%;"></view>
+
+        <view class="tbx-groups">
+          <view
+            wx:for="{{list}}"
+            wx:key="key"
+            class="tbx-group"
+            data-index="{{index}}"
+            catchtap="onGroupTap"
+          >
+            <view class="tbx-bars">
+              <view class="tbx-bar income" style="height: {{item.incPct}}%;"></view>
+              <view class="tbx-bar expense" style="height: {{item.expPct}}%;"></view>
+            </view>
+            <text class="tbx-xlabel {{item.showLabel ? '' : 'is-hidden'}}">{{item.label}}</text>
           </view>
-          <text class="tbx-amount income {{item._zeroIncome ? 'is-zero' : ''}}">{{item._fmtIncome}}</text>
+        </view>
+
+        <!-- 选中指示线：从顶部垂到基线，指向当前选中的那组 -->
+        <view
+          wx:if="{{tooltip.visible}}"
+          class="tbx-indicator"
+          style="left: {{tooltip.leftPct}}%;"
+        ></view>
+
+        <!-- 点选浮层 -->
+        <view
+          wx:if="{{tooltip.visible}}"
+          class="tbx-tooltip"
+          style="left: {{tooltip.leftPct}}%;"
+          catchtap="noop"
+        >
+          <text class="tbx-tooltip-title">{{tooltip.label}}</text>
+          <view class="tbx-tooltip-row">
+            <view class="tbx-tooltip-dot income"></view>
+            <text class="tbx-tooltip-text">收入：{{tooltip._fmtIncome}}</text>
+          </view>
+          <view class="tbx-tooltip-row">
+            <view class="tbx-tooltip-dot expense"></view>
+            <text class="tbx-tooltip-text">支出：{{tooltip._fmtExpense}}</text>
+          </view>
+          <text
+            wx:if="{{showDetailLink}}"
+            class="tbx-tooltip-link"
+            bindtap="onDetail"
+          >查看分类 ›</text>
         </view>
       </view>
     </view>
+
     <view class="tbx-tip" wx:if="{{tip}}">{{tip}}</view>
   </block>
 

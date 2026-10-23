@@ -5,6 +5,9 @@ const { statsAPI, budgetAPI, expenseAPI, currentLedgerId } = require('../../util
 
 const pad = (n) => String(n).padStart(2, '0');
 
+// Y 轴分几段：4 段 = 5 条刻度线（含 0）。只改这里，刻度和柱高会一起变。
+const AXIS_SEGMENTS = 4;
+
 Page({
   data: {
     // 时间维度切换：日/月/年
@@ -34,18 +37,21 @@ Page({
     daySheet: { visible: false, date: '', loading: false, list: [], totalExpense: '0', totalIncome: '0' },
 
     // ============ 近12周（展示在月视图内） ============
-    // 每项: { key, label, expense, income, expPct, incPct,
+    // 每项: { key, label, showLabel, expense, income, expPct, incPct,
     //        _fmtExpense, _fmtIncome, _zeroExpense, _zeroIncome }
     recentWeeks: [],
+    recentYTicks: [],
 
     // ============ 月视图 ============
     monthOffset: 0,        // 0=最近12个月，1=再往前12个月…
     monthTitle: '',
     monthBars: [],
+    monthYTicks: [],
     monthSheet: { visible: false, ym: '', title: '', categories: [], totalAmount: '0' },
 
     // ============ 年视图 ============
     yearBars: [],
+    yearYTicks: [],
 
     // ============ 共用：支出分类饼图 ============
     categoryStats: [],          // [{categoryId, categoryName, amount, percentage, _fmtAmount}]
@@ -329,35 +335,55 @@ Page({
 
   noop() {},
 
-  // ==================== 共用：趋势条形图数据 ====================
+  // ==================== 共用：趋势柱状图数据 ====================
 
   /**
-   * 把云函数的趋势数据加工成 trend-bars 组件需要的行数据。
+   * 把云函数的趋势数据加工成 trend-bars 组件需要的行数据 + Y 轴刻度。
    *
    * keyField 是该维度的唯一键（月=ym，周=date，年=year），wx:key 需要它。
-   * 百分比一律在这里算：WXML 的 Mustache 不支持调用方法，也不能做较复杂运算。
+   * 刻度、柱高百分比、格式化金额全在这里算：WXML 的 Mustache 不支持调用方法，
+   * 也不支持 Math.* 这类全局对象，写了会静默渲染为空且不报错。
    *
-   * 关键点：支出与收入**共用同一个分母**（两者的最大值）。
-   * 如果各自归一化，同一个月里「收入 10 元」和「支出 1 万元」会一样长，
-   * 两根柱子的长度就失去可比性——这是双数据柱图最容易犯的错。
+   * 两个关键口径：
+   *   1. 支出与收入**共用同一个分母**（两者最大值再向上取整到整齐刻度）。
+   *      各自归一化会让「收入 10 元」和「支出 1 万元」画成一样高。
+   *   2. 柱高相对的是**刻度上限 yMax**，不是数据最大值 —— 否则最高的那根永远顶到顶，
+   *      Y 轴刻度就成了摆设。
    */
-  buildTrendRows(raw, keyField) {
+  buildTrendChart(raw, keyField) {
     const items = raw || [];
+
     let max = 0;
     items.forEach((x) => {
       max = Math.max(max, Number(x.expense) || 0, Number(x.income) || 0);
     });
-    if (max <= 0) max = 1;
 
-    // 非零值至少给 2% 宽度，否则几块钱的记录在图上完全看不见，
-    // 用户会以为那段时间没记账。
+    const yMax = this.niceAxisMax(max, AXIS_SEGMENTS);
+    const step = yMax / AXIS_SEGMENTS;
+
+    // 从高到低排：pct 是相对绘图区顶部的位置，与 CSS 的 top 百分比直接对应
+    const yTicks = [];
+    for (let i = AXIS_SEGMENTS; i >= 0; i--) {
+      yTicks.push({
+        key: `t${i}`,
+        label: this.formatAxisLabel(step * i),
+        pct: Number(((1 - i / AXIS_SEGMENTS) * 100).toFixed(2)),
+        isBase: i === 0,
+      });
+    }
+
+    // 非零值保底 1.5%（320rpx 高度上约 5rpx），否则几块钱的记录在图上完全不存在
     const pct = (v) => {
       const n = Number(v) || 0;
       if (n <= 0) return 0;
-      return Math.max(2, Math.round((n / max) * 100));
+      return Number(Math.max(1.5, (n / yMax) * 100).toFixed(2));
     };
 
-    return items.map((x, i) => {
+    // 12 个周期每 3 个标一次（10月 / 1月 / 4月 / 7月），挤不下时宁可少标不要叠字
+    const n = items.length;
+    const stride = n > 6 ? 3 : 1;
+
+    const rows = items.map((x, i) => {
       const expense = Number(x.expense) || 0;
       const income = Number(x.income) || 0;
       const rawKey = x[keyField];
@@ -365,6 +391,7 @@ Page({
         key: rawKey != null && rawKey !== '' ? String(rawKey) : `i${i}`,
         ym: x.ym || '',
         label: x.label || '',
+        showLabel: i % stride === 0,
         expense,
         income,
         expPct: pct(expense),
@@ -375,6 +402,43 @@ Page({
         _zeroIncome: income <= 0,
       };
     });
+
+    return { rows, yTicks };
+  },
+
+  /**
+   * 把最大值向上取整到「整齐」的刻度上限。
+   *
+   * 例：17984.62 元（1798462 分）→ 每段约 449615.5 → 量级 1e5、归一 4.5 → 取 5
+   *     → 上限 5 × 1e5 × 4 = 2000000 分 = 2 万元，刻度为 0 / 5千 / 1万 / 1.5万 / 2万。
+   * 不取整的话 Y 轴会出现 0 / 4496.15 / 8992.3 这种没法读的数字。
+   */
+  niceAxisMax(max, segments) {
+    const raw = Number(max) > 0 ? Number(max) : 10000; // 无数据时给 100 元量程
+    const rough = raw / segments;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+    const normalized = rough / magnitude;
+
+    let nice;
+    if (normalized <= 1) nice = 1;
+    else if (normalized <= 2) nice = 2;
+    else if (normalized <= 2.5) nice = 2.5;
+    else if (normalized <= 5) nice = 5;
+    else nice = 10;
+
+    return nice * magnitude * segments;
+  },
+
+  /** 刻度文案：万元以上缩成「1.5万」，其余取整（单位是分，先转元） */
+  formatAxisLabel(fen) {
+    const yuan = (Number(fen) || 0) / 100;
+    if (yuan <= 0) return '0';
+    if (yuan >= 10000) {
+      const wan = yuan / 10000;
+      const isInt = Math.abs(wan - Math.round(wan)) < 1e-9;
+      return `${isInt ? Math.round(wan) : wan.toFixed(1)}万`;
+    }
+    return String(Math.round(yuan));
   },
 
   // ==================== 月视图：月度趋势 + 分类 + 预算 ====================
@@ -395,11 +459,11 @@ Page({
     ]);
     if (seq !== this._dataSeq) return; // 已翻到别的月份区间或切换账本，丢弃
 
-    // 支出与收入共用同一分母（见 buildTrendRows 注释），所以这里不再各自算 max
-    const bars = this.buildTrendRows((trend && trend.months) || [], 'ym');
+    // 支出与收入共用同一分母（刻度上限），各自算 max 会让两根柱子失去可比性
+    const monthChart = this.buildTrendChart((trend && trend.months) || [], 'ym');
 
     // 近12周（原「周」维度降级为月视图内的小图）
-    const recentWeeks = this.buildTrendRows((weekTrend && weekTrend.weeks) || [], 'date');
+    const weekChart = this.buildTrendChart((weekTrend && weekTrend.weeks) || [], 'date');
 
     // 空响应兜底：云函数返回 null 时按空数据处理，不让 null 进入后续取属性的路径
     const catData = this.processCategoryData(catStats, '本月支出分类');
@@ -413,8 +477,10 @@ Page({
 
     this.setData({
       monthTitle: `${(trend && trend.startYm) || ''} ~ ${(trend && trend.endYm) || ''}`,
-      monthBars: bars,
-      recentWeeks,
+      monthBars: monthChart.rows,
+      monthYTicks: monthChart.yTicks,
+      recentWeeks: weekChart.rows,
+      recentYTicks: weekChart.yTicks,
       monthStats: fmtMonthStats,
       ...catData,
     });
@@ -475,10 +541,10 @@ Page({
     ]);
     if (seq !== this._dataSeq) return; // 已切换账本或维度，丢弃
 
-    const bars = this.buildTrendRows((res && res.years) || [], 'year');
+    const yearChart = this.buildTrendChart((res && res.years) || [], 'year');
 
     const catData = this.processCategoryData(catRes, '本年支出分类');
-    this.setData({ yearBars: bars, ...catData });
+    this.setData({ yearBars: yearChart.rows, yearYTicks: yearChart.yTicks, ...catData });
   },
 
   // ==================== 共用：分类饼图数据处理 ====================

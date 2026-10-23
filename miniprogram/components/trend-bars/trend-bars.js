@@ -1,18 +1,19 @@
-// components/trend-bars/trend-bars.js — 收支趋势条形图（横向条形 + 独立金额列）
+// components/trend-bars/trend-bars.js — 收支趋势分组柱状图（竖向双柱 + Y 轴刻度 + 点选浮层）
 //
-// 为什么是横向条形而不是竖向柱：
-//   1. 金额要在柱子「旁边」独立成列——横向下柱子末端天然是数字列，竖向只能在柱顶堆字，
-//      12 个月 × 2 条柱子的标签会横向打架；
-//   2. 不需要横向 scroll-view，一屏看全 12 个月，趋势对比才成立；
-//   3. 面积为零的月份也占一行，时间轴的连续性不会断。
+// 为什么不用 canvas：只有 12 组柱子，纯 CSS/flex 就能精确控制柱高与对齐，
+// 还免掉 canvas 的 DPR 换算、尺寸测量、重绘时机与层级覆盖问题。
 //
-// 所有数值（百分比宽度、格式化金额、零值标记）一律由调用方在 JS 侧算好后传入，
-// 组件只负责渲染。WXML 的 Mustache 不支持调用方法/全局对象，写了会静默渲染为空。
+// 所有数值（Y 轴刻度、柱高百分比、格式化金额、标签是否显示）一律由调用方
+// 在 JS 侧算好后传入，组件只负责渲染与交互。
+// WXML 的 Mustache 不支持调用方法/全局对象，写了会静默渲染为空。
 Component({
   properties: {
-    // [{ key, label, ym, expense, income, expPct, incPct,
+    // [{ key, label, showLabel, expense, income, expPct, incPct,
     //    _fmtExpense, _fmtIncome, _zeroExpense, _zeroIncome }]
     list: { type: Array, value: [] },
+    // [{ label, pct, isBase, key }]，从高到低排列（含 0 值刻度）
+    yTicks: { type: Array, value: [] },
+
     title: { type: String, value: '收支趋势' },
     tip: { type: String, value: '' },
     emptyIcon: { type: String, value: '📊' },
@@ -22,18 +23,80 @@ Component({
     navTitle: { type: String, value: '' },
     nextDisabled: { type: Boolean, value: false },
 
-    // 行是否可点（点开该月的分类明细）
-    tappable: { type: Boolean, value: false },
+    // 浮层里是否给「查看分类」入口（月视图需要，周/年没有分类弹窗）
+    showDetailLink: { type: Boolean, value: false },
+  },
+
+  data: {
+    empty: true,
+    // 点选浮层。leftPct 是相对绘图区宽度的百分比，
+    // 已夹在 [25, 75] 内，避免浮层在两端溢出卡片。
+    tooltip: {
+      visible: false,
+      index: -1,
+      leftPct: 50,
+      label: '',
+      _fmtIncome: '0',
+      _fmtExpense: '0',
+    },
+  },
+
+  observers: {
+    list(list) {
+      this.setData({ empty: !list || list.length === 0 });
+    },
+    // 数据换了（翻页/切账本）就把浮层收掉，否则会停在上一个区间的数字上
+    yTicks() {
+      if (this.data.tooltip.visible) {
+        this.setData({ 'tooltip.visible': false });
+      }
+    },
   },
 
   methods: {
-    onRowTap(e) {
-      if (!this.data.tappable) return;
+    /** 点某一组柱子：没选中就弹浮层，已选中则收起 */
+    onGroupTap(e) {
       const index = Number(e.currentTarget.dataset.index);
+      const item = this.data.list[index];
+      if (!item) return;
+
+      if (this.data.tooltip.visible && this.data.tooltip.index === index) {
+        this.setData({ 'tooltip.visible': false });
+        return;
+      }
+
+      const n = this.data.list.length || 1;
+      const raw = ((index + 0.5) / n) * 100;
+
+      this.setData({
+        tooltip: {
+          visible: true,
+          index,
+          leftPct: Math.min(75, Math.max(25, raw)),
+          label: item.label || '',
+          _fmtIncome: item._fmtIncome,
+          _fmtExpense: item._fmtExpense,
+        },
+      });
+    },
+
+    /** 点空白处收起浮层 */
+    onPlotTap() {
+      if (this.data.tooltip.visible) {
+        this.setData({ 'tooltip.visible': false });
+      }
+    },
+
+    /** 浮层上的「查看分类」：把选中项抛给页面 */
+    onDetail() {
+      const index = this.data.tooltip.index;
       const item = this.data.list[index];
       if (!item) return;
       this.triggerEvent('itemtap', { item, index });
     },
+
+    /** 浮层内部点击不冒泡到 onPlotTap */
+    noop() {},
 
     onPrev() {
       if (!this.data.navTitle) return;

@@ -1,7 +1,11 @@
-/* components/trend-bars/trend-bars.wxss
+/* components/trend-bars/trend-bars.wxss — 竖向分组柱状图
    组件样式默认隔离，页面/全局的 .card 等类不会作用到这里，因此自带卡片样式
    （与 app.wxss 的 .card 保持一致）。CSS 变量定义在 page 选择器上，
-   自定义属性会继承进组件，可以正常使用。 */
+   自定义属性会继承进组件，可以正常使用。
+
+   尺寸口径：绘图区高度 320rpx、X 轴标签带 34rpx。
+   Y 轴刻度的 top 百分比与柱高百分比共用同一套换算（见页面 buildTrendChart），
+   任何一处改动都必须同步，否则刻度线和柱子会对不齐。 */
 
 .tbx-card {
   background: var(--color-bg-card);
@@ -26,7 +30,6 @@
   color: var(--color-text-primary);
 }
 
-/* 图例：支出/收入双色，避免用户误读哪条是哪个 */
 .tbx-legend {
   display: flex;
   align-items: center;
@@ -41,12 +44,12 @@
 .tbx-legend-dot {
   width: 14rpx;
   height: 14rpx;
-  border-radius: 4rpx;
+  border-radius: 50%;
   margin-right: 8rpx;
 }
 
-.tbx-legend-dot.expense { background: var(--color-expense); }
 .tbx-legend-dot.income { background: var(--color-income); }
+.tbx-legend-dot.expense { background: var(--color-expense); }
 
 .tbx-legend-text {
   font-size: var(--font-xs);
@@ -84,94 +87,173 @@
   font-weight: 500;
 }
 
-/* ============ 数据行 ============ */
-.tbx-row {
+/* ============ 绘图区 ============ */
+.tbx-plot {
   display: flex;
-  align-items: center;
-  padding: 14rpx 4rpx;
-  border-radius: var(--radius-sm);
+  padding-top: 16rpx;
 }
 
-.tbx-row.is-tappable:active {
-  background: var(--color-bg-page);
-}
-
-/* 时间刻度：数字是半角，2026年 ≈ 66rpx，84rpx 足够且不换行 */
-.tbx-row-label {
-  width: 84rpx;
+/* Y 轴：与柱状区等高，刻度用百分比定位，天然与网格线对齐 */
+.tbx-yaxis {
+  position: relative;
+  width: 68rpx;
   flex-shrink: 0;
-  font-size: var(--font-xs);
+  height: 320rpx;
+}
+
+.tbx-ytick {
+  position: absolute;
+  right: 12rpx;
+  transform: translateY(-50%);
+  font-size: 20rpx;
   color: var(--color-text-hint);
   white-space: nowrap;
-  overflow: hidden;
 }
 
-.tbx-row-body {
+.tbx-body {
+  position: relative;
   flex: 1;
   min-width: 0;
 }
 
-.tbx-line {
+.tbx-grid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 320rpx;
+}
+
+.tbx-gridline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1rpx dashed #E9E9E9;
+}
+
+/* 0 值基线用实线，视觉上"地面"更明确 */
+.tbx-gridline.is-base {
+  border-top-style: solid;
+  border-top-color: #E2E2E2;
+}
+
+.tbx-groups {
+  position: relative;
+  display: flex;
+  height: 354rpx;
+}
+
+.tbx-group {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tbx-bars {
+  height: 320rpx;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4rpx;
+}
+
+/* 柱宽用百分比 + 上限：12 组时约 16rpx，2 组时不会变成两根宽条 */
+.tbx-bar {
+  width: 30%;
+  max-width: 22rpx;
+  min-width: 6rpx;
+  border-radius: 4rpx 4rpx 0 0;
+}
+
+.tbx-bar.income { background: var(--color-income); }
+.tbx-bar.expense { background: var(--color-expense); }
+
+.tbx-xlabel {
+  height: 34rpx;
+  line-height: 34rpx;
+  text-align: center;
+  font-size: 18rpx;
+  color: var(--color-text-hint);
+  white-space: nowrap;
+}
+
+/* 密集区间只显示间隔刻度，但格子仍占位，保证柱组等宽 */
+.tbx-xlabel.is-hidden {
+  visibility: hidden;
+}
+
+/* ============ 选中指示线与浮层 ============ */
+.tbx-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 34rpx;
+  width: 2rpx;
+  background: var(--color-income);
+  opacity: 0.45;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.tbx-tooltip {
+  position: absolute;
+  top: 24rpx;
+  transform: translateX(-50%);
+  min-width: 240rpx;
+  padding: 14rpx 18rpx 12rpx;
+  background: rgba(45, 45, 48, 0.94);
+  border-radius: 12rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.18);
+  z-index: 10;
+}
+
+.tbx-tooltip-title {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin-bottom: 4rpx;
+}
+
+.tbx-tooltip-row {
   display: flex;
   align-items: center;
-  height: 18rpx;
+  height: 40rpx;
 }
 
-.tbx-line + .tbx-line {
-  margin-top: 12rpx;
-}
-
-/* 浅色轨道：给出"满格"参照，条形长度才有意义 */
-.tbx-track {
-  flex: 1;
-  min-width: 0;
-  height: 18rpx;
-  background: #F5F5F5;
-  border-radius: 9999rpx;
-  overflow: hidden;
-}
-
-.tbx-bar {
-  height: 100%;
-  border-radius: 9999rpx;
-  transition: width 0.35s ease;
-}
-
-.tbx-bar.expense {
-  background: linear-gradient(90deg, #FF8A8A, var(--color-expense));
-}
-
-.tbx-bar.income {
-  background: linear-gradient(90deg, #5FD68F, var(--color-income));
-}
-
-/* 金额独立成列，紧贴条形末端（不是压在条上） */
-.tbx-amount {
-  width: 168rpx;
+.tbx-tooltip-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  margin-right: 10rpx;
   flex-shrink: 0;
-  margin-left: 16rpx;
+}
+
+.tbx-tooltip-dot.income { background: var(--color-income); }
+.tbx-tooltip-dot.expense { background: var(--color-expense); }
+
+.tbx-tooltip-text {
+  font-size: 22rpx;
+  color: #FFFFFF;
+  white-space: nowrap;
+}
+
+.tbx-tooltip-link {
+  display: block;
+  margin-top: 8rpx;
+  padding-top: 8rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.18);
+  font-size: 20rpx;
+  color: #6BE39B;
   text-align: right;
-  font-size: var(--font-xs);
-  font-weight: 600;
-  color: var(--color-expense);
-  font-variant-numeric: tabular-nums;
-}
-
-.tbx-amount.income {
-  color: var(--color-income);
-}
-
-/* 该时段无记录：数字保留（时间轴连续），但降为次要色，不与真实金额抢注意力 */
-.tbx-amount.is-zero {
-  color: var(--color-text-placeholder);
-  font-weight: 400;
 }
 
 .tbx-tip {
   text-align: center;
   font-size: var(--font-xs);
   color: var(--color-text-hint);
-  padding-top: var(--spacing-md);
+  padding-top: var(--spacing-sm);
 }
 
 /* ============ 空状态 ============ */
