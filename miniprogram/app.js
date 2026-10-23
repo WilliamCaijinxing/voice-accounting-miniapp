@@ -62,16 +62,23 @@ App({
     }
   },
 
-  // 获取用户公开信息（需要用户授权）
-  async getUserProfile() {
+  // 通用的"刷新用户资料"入口。
+  // 原实现在这里调 wx.getUserProfile —— 该接口 2022-10-25 起只返回灰色头像
+  // 和"微信用户"，已经不产生任何有效信息。昵称/头像统一在「我的」页面
+  // 用 chooseAvatar + type="nickname" 采集，这里只从服务端拉最新资料。
+  async refreshUserProfile() {
     try {
-      const { userInfo } = await this.promisify(wx.getUserProfile)({
-        desc: '用于记账数据关联',
+      const res = await wx.cloud.callFunction({
+        name: 'userLogin',
+        data: { action: 'get' },
       });
-      this.globalData.userInfo = { ...this.globalData.userInfo, ...userInfo };
-      return userInfo;
+      if (res.result && res.result.code === 0 && res.result.data) {
+        this.globalData.userInfo = res.result.data;
+        return res.result.data;
+      }
+      return null;
     } catch (err) {
-      console.warn('User declined profile authorization');
+      console.warn('[app] 拉取用户资料失败:', err);
       return null;
     }
   },

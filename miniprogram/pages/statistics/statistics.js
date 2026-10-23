@@ -34,19 +34,18 @@ Page({
     daySheet: { visible: false, date: '', loading: false, list: [], totalExpense: '0', totalIncome: '0' },
 
     // ============ 近12周（展示在月视图内） ============
+    // 每项: { key, label, expense, income, expPct, incPct,
+    //        _fmtExpense, _fmtIncome, _zeroExpense, _zeroIncome }
     recentWeeks: [],
-    maxRecentExpense: 0,
 
     // ============ 月视图 ============
     monthOffset: 0,        // 0=最近12个月，1=再往前12个月…
     monthTitle: '',
     monthBars: [],
-    maxMonthExpense: 0,
     monthSheet: { visible: false, ym: '', title: '', categories: [], totalAmount: '0' },
 
     // ============ 年视图 ============
     yearBars: [],
-    maxYearExpense: 0,
 
     // ============ 共用：支出分类饼图 ============
     categoryStats: [],          // [{categoryId, categoryName, amount, percentage, _fmtAmount}]
@@ -330,6 +329,54 @@ Page({
 
   noop() {},
 
+  // ==================== 共用：趋势条形图数据 ====================
+
+  /**
+   * 把云函数的趋势数据加工成 trend-bars 组件需要的行数据。
+   *
+   * keyField 是该维度的唯一键（月=ym，周=date，年=year），wx:key 需要它。
+   * 百分比一律在这里算：WXML 的 Mustache 不支持调用方法，也不能做较复杂运算。
+   *
+   * 关键点：支出与收入**共用同一个分母**（两者的最大值）。
+   * 如果各自归一化，同一个月里「收入 10 元」和「支出 1 万元」会一样长，
+   * 两根柱子的长度就失去可比性——这是双数据柱图最容易犯的错。
+   */
+  buildTrendRows(raw, keyField) {
+    const items = raw || [];
+    let max = 0;
+    items.forEach((x) => {
+      max = Math.max(max, Number(x.expense) || 0, Number(x.income) || 0);
+    });
+    if (max <= 0) max = 1;
+
+    // 非零值至少给 2% 宽度，否则几块钱的记录在图上完全看不见，
+    // 用户会以为那段时间没记账。
+    const pct = (v) => {
+      const n = Number(v) || 0;
+      if (n <= 0) return 0;
+      return Math.max(2, Math.round((n / max) * 100));
+    };
+
+    return items.map((x, i) => {
+      const expense = Number(x.expense) || 0;
+      const income = Number(x.income) || 0;
+      const rawKey = x[keyField];
+      return {
+        key: rawKey != null && rawKey !== '' ? String(rawKey) : `i${i}`,
+        ym: x.ym || '',
+        label: x.label || '',
+        expense,
+        income,
+        expPct: pct(expense),
+        incPct: pct(income),
+        _fmtExpense: formatAmount(expense),
+        _fmtIncome: formatAmount(income),
+        _zeroExpense: expense <= 0,
+        _zeroIncome: income <= 0,
+      };
+    });
+  },
+
   // ==================== 月视图：月度趋势 + 分类 + 预算 ====================
 
   async loadMonthView(ledgerId = currentLedgerId(), seq) {
@@ -348,22 +395,11 @@ Page({
     ]);
     if (seq !== this._dataSeq) return; // 已翻到别的月份区间或切换账本，丢弃
 
-    const months = (trend && trend.months) || [];
-    const max = months.reduce((m, x) => Math.max(m, x.expense), 0);
-    const bars = months.map((x) => ({
-      ...x,
-      barHeight: x.expense > 0 ? Math.max(8, (x.expense / (max || 1)) * 160) : 4,
-      _fmtExpense: formatAmount(x.expense),
-    }));
+    // 支出与收入共用同一分母（见 buildTrendRows 注释），所以这里不再各自算 max
+    const bars = this.buildTrendRows((trend && trend.months) || [], 'ym');
 
-    // 近12周支出（原「周」维度降级为月视图内的小图）
-    const weeks = (weekTrend && weekTrend.weeks) || [];
-    const weekMax = weeks.reduce((m, w) => Math.max(m, w.expense), 0);
-    const recentWeeks = weeks.map((w) => ({
-      ...w,
-      barHeight: w.expense > 0 ? Math.max(8, (w.expense / (weekMax || 1)) * 160) : 4,
-      _fmtExpense: formatAmount(w.expense),
-    }));
+    // 近12周（原「周」维度降级为月视图内的小图）
+    const recentWeeks = this.buildTrendRows((weekTrend && weekTrend.weeks) || [], 'date');
 
     // 空响应兜底：云函数返回 null 时按空数据处理，不让 null 进入后续取属性的路径
     const catData = this.processCategoryData(catStats, '本月支出分类');
@@ -378,9 +414,7 @@ Page({
     this.setData({
       monthTitle: `${(trend && trend.startYm) || ''} ~ ${(trend && trend.endYm) || ''}`,
       monthBars: bars,
-      maxMonthExpense: max,
       recentWeeks,
-      maxRecentExpense: weekMax,
       monthStats: fmtMonthStats,
       ...catData,
     });
@@ -397,10 +431,11 @@ Page({
     this.loadMonthView().catch((err) => this.handleLoadError(err));
   },
 
-  /** 点击月份柱子 → 该月分类弹窗 */
+  /** 点击某个时段的行 → 该月分类弹窗（事件由 trend-bars 组件抛出） */
   async tapMonthBar(e) {
-    const { ym } = e.currentTarget.dataset;
-    if (!ym) return;
+    const item = (e && e.detail && e.detail.item) || null;
+    if (!item || !item.ym) return;
+    const ym = item.ym;
     const [y, m] = ym.split('-').map(Number);
     const startDate = `${ym}-01`;
     const endDate = `${ym}-${pad(new Date(y, m, 0).getDate())}`;
@@ -440,16 +475,10 @@ Page({
     ]);
     if (seq !== this._dataSeq) return; // 已切换账本或维度，丢弃
 
-    const years = (res && res.years) || [];
-    const max = years.reduce((m, y) => Math.max(m, y.expense), 0);
-    const bars = years.map((y) => ({
-      ...y,
-      barHeight: y.expense > 0 ? Math.max(10, (y.expense / (max || 1)) * 180) : 4,
-      _fmtExpense: formatAmount(y.expense),
-    }));
+    const bars = this.buildTrendRows((res && res.years) || [], 'year');
 
     const catData = this.processCategoryData(catRes, '本年支出分类');
-    this.setData({ yearBars: bars, maxYearExpense: max, ...catData });
+    this.setData({ yearBars: bars, ...catData });
   },
 
   // ==================== 共用：分类饼图数据处理 ====================

@@ -1,5 +1,6 @@
 // pages/ledger/ledger.js — 共享账本管理（列表 / 创建 / 加入 / 成员 / 邀请码 / 退出）
 const { ledgerAPI } = require('../../utils/cloud');
+const { pickProfile } = require('../../utils/util');
 const app = getApp();
 
 Page({
@@ -63,8 +64,8 @@ Page({
     }
     wx.showLoading({ title: '创建中...' });
     try {
-      const userInfo = app.globalData.userInfo || {};
-      const ledger = await ledgerAPI.create(name, userInfo.nickName || '', userInfo.avatarUrl || '');
+      const profile = pickProfile(app.globalData.userInfo);
+      const ledger = await ledgerAPI.create(name, profile.nickname, profile.avatar);
       wx.hideLoading();
       this.setData({ showCreate: false });
       // 创建后自动切换为该账本
@@ -94,8 +95,8 @@ Page({
     }
     wx.showLoading({ title: '加入中...' });
     try {
-      const userInfo = app.globalData.userInfo || {};
-      const ledger = await ledgerAPI.joinByCode(code, userInfo.nickName || '', userInfo.avatarUrl || '');
+      const profile = pickProfile(app.globalData.userInfo);
+      const ledger = await ledgerAPI.joinByCode(code, profile.nickname, profile.avatar);
       wx.hideLoading();
       this.setData({ showJoin: false });
       app.setCurrentLedger({ id: ledger._id, name: ledger.name, type: 'shared' });

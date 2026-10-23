@@ -18,6 +18,23 @@ const formatAmount = (amount) => {
 };
 
 /**
+ * 从用户文档里取出展示用的昵称与头像
+ *
+ * users 集合的字段是 nickname / avatar（我们自己的口径），
+ * 不是微信授权返回的 nickName / avatarUrl。此前三处「创建/加入账本」的地方
+ * 都写成了 userInfo.nickName，取到的永远是 undefined，
+ * 于是共享账本成员昵称恒为空串，账单里一律显示"成员"。
+ *
+ * 这里同时兼容两种字段名，让老数据（如果存过微信原始字段）也能显示出来。
+ * @param {object} user 用户文档
+ * @returns {{nickname: string, avatar: string}}
+ */
+const pickProfile = (user) => ({
+  nickname: (user && (user.nickname || user.nickName)) || '',
+  avatar: (user && (user.avatar || user.avatarUrl)) || '',
+});
+
+/**
  * 格式化日期
  * @param {Date|string|number} date 日期
  * @param {string} format 格式 ('YYYY-MM-DD' | 'MM-DD' | 'MM月DD日')
@@ -113,6 +130,7 @@ const throttle = (fn, delay = 300) => {
 module.exports = {
   formatAmount,
   formatDate,
+  pickProfile,
   getToday,
   getMonthStart,
   getMonthEnd,

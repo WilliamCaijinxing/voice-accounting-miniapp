@@ -106,79 +106,29 @@
 
 <!-- ==================== 月视图 ==================== -->
 <block wx:if="{{activeRange === 'month'}}">
-  <!-- 月度消费趋势图 -->
-  <view class="card chart-card">
-    <view class="card-header flex-between">
-      <text class="card-title">📈 月度消费趋势</text>
-    </view>
+  <!-- 月度收支趋势：支出/收入双条 + 金额独立成列 -->
+  <trend-bars
+    title="📈 月度收支趋势"
+    list="{{monthBars}}"
+    nav-title="{{monthTitle}}"
+    next-disabled="{{monthOffset <= 0}}"
+    tip="点击任意一行查看该月支出分类 · ‹ › 翻页查看更早历史"
+    tappable="{{true}}"
+    empty-icon="📈"
+    empty-text="暂无月度数据"
+    bind:itemtap="tapMonthBar"
+    bind:prev="prevMonthPage"
+    bind:next="nextMonthPage"
+  />
 
-    <view class="cal-nav">
-      <view class="cal-nav-btn" bindtap="prevMonthPage">‹</view>
-      <view class="cal-nav-title">{{monthTitle}}</view>
-      <view class="cal-nav-btn {{monthOffset <= 0 ? 'disabled' : ''}}" bindtap="nextMonthPage">›</view>
-    </view>
-
-    <view class="bar-chart" wx:if="{{monthBars.length > 0}}">
-      <scroll-view scroll-x class="bar-scroll">
-        <view class="bar-container">
-          <view
-            wx:for="{{monthBars}}"
-            wx:key="ym"
-            class="bar-column"
-            data-ym="{{item.ym}}"
-            bindtap="tapMonthBar"
-          >
-            <view class="bar-value expense" wx:if="{{item.expense > 0}}">
-              <text class="bar-value-text">{{item._fmtExpense}}</text>
-            </view>
-            <view class="bar {{item.expense > 0 ? 'active' : ''}}"
-              style="height: {{item.barHeight}}rpx;">
-            </view>
-            <text class="bar-label">{{item.label}}</text>
-          </view>
-        </view>
-      </scroll-view>
-      <view class="chart-tip">← 左右滑动查看更多月份 · 点击柱子查看该月支出分类 · ‹ 翻页查看更早历史 →</view>
-    </view>
-
-    <view class="empty-chart" wx:else>
-      <text class="empty-icon">📈</text>
-      <text>暂无月度支出数据</text>
-    </view>
-  </view>
-
-  <!-- 近12周支出（原「周」维度降级为月视图内的小图） -->
-  <view class="card chart-card">
-    <view class="card-header flex-between">
-      <text class="card-title">📊 近12周支出</text>
-    </view>
-
-    <view class="bar-chart" wx:if="{{recentWeeks.length > 0}}">
-      <scroll-view scroll-x class="bar-scroll">
-        <view class="bar-container">
-          <view
-            wx:for="{{recentWeeks}}"
-            wx:key="date"
-            class="bar-column"
-          >
-            <view class="bar-value expense" wx:if="{{item.expense > 0}}">
-              <text class="bar-value-text">{{item._fmtExpense}}</text>
-            </view>
-            <view class="bar {{item.expense > 0 ? 'active' : ''}}"
-              style="height: {{item.barHeight}}rpx;">
-            </view>
-            <text class="bar-label">{{item.label}}</text>
-          </view>
-        </view>
-      </scroll-view>
-      <view class="chart-tip">← 左右滑动查看近12周 →</view>
-    </view>
-
-    <view class="empty-chart" wx:else>
-      <text class="empty-icon">📊</text>
-      <text>暂无周支出数据</text>
-    </view>
-  </view>
+  <!-- 近12周收支（原「周」维度降级为月视图内的小图） -->
+  <trend-bars
+    title="📊 近12周收支"
+    list="{{recentWeeks}}"
+    tip="最近 12 周的支出与收入对比"
+    empty-icon="📊"
+    empty-text="暂无周数据"
+  />
 
   <category-pie
     list="{{categoryStats}}"
@@ -226,35 +176,13 @@
 
 <!-- ==================== 年视图 ==================== -->
 <block wx:if="{{activeRange === 'year'}}">
-  <view class="card chart-card">
-    <view class="card-header">
-      <text class="card-title">📊 年度消费趋势</text>
-    </view>
-
-    <view class="bar-chart" wx:if="{{yearBars.length > 0}}">
-      <view class="bar-container">
-        <view
-          wx:for="{{yearBars}}"
-          wx:key="year"
-          class="bar-column"
-        >
-          <view class="bar-value expense" wx:if="{{item.expense > 0}}">
-            <text class="bar-value-text">{{item._fmtExpense}}</text>
-          </view>
-          <view class="bar {{item.expense > 0 ? 'active' : ''}}"
-            style="height: {{item.barHeight}}rpx;">
-          </view>
-          <text class="bar-label">{{item.label}}</text>
-        </view>
-      </view>
-      <view class="chart-tip">柱状图显示历年总支出对比</view>
-    </view>
-
-    <view class="empty-chart" wx:else>
-      <text class="empty-icon">📊</text>
-      <text>暂无年度支出数据</text>
-    </view>
-  </view>
+  <trend-bars
+    title="📊 年度收支趋势"
+    list="{{yearBars}}"
+    tip="历年总支出与总收入对比"
+    empty-icon="📊"
+    empty-text="暂无年度数据"
+  />
 
   <category-pie
     list="{{categoryStats}}"

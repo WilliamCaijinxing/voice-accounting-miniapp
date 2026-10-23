@@ -1,6 +1,7 @@
 {
   "usingComponents": {
-    "category-pie": "/components/category-pie/category-pie"
+    "category-pie": "/components/category-pie/category-pie",
+    "trend-bars": "/components/trend-bars/trend-bars"
   },
   "navigationBarTitleText": "统计"
 }

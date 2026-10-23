@@ -21,6 +21,13 @@ Page({
     // 当前账本（概览所属）
     currentLedgerName: '我的账本',
     isShared: false,
+
+    // ============ 资料编辑 ============
+    // 微信已废弃 wx.getUserProfile（2022-10-25 起只返回灰色头像和"微信用户"），
+    // 现在正确的做法是 chooseAvatar 按钮 + type="nickname" 输入框，所以改成页内编辑面板。
+    editing: false,
+    saving: false,
+    form: { nickname: '', avatar: '', avatarIsLocal: false },
   },
 
   onShow() {
@@ -75,51 +82,92 @@ Page({
     }
   },
 
-  /** 完善资料：优先微信授权头像昵称，拒绝则手动输入昵称 */
-  async editProfile() {
-    // 方式一：微信头像昵称填写能力（新版基础库）
-    if (wx.getUserProfile) {
-      try {
-        const { userInfo } = await this.promisify(wx.getUserProfile)({
-          desc: '用于完善记账用户资料',
-        });
-        if (userInfo && userInfo.nickName) {
-          await this.saveProfile(userInfo.nickName, userInfo.avatarUrl);
-          return;
-        }
-      } catch (err) {
-        // 用户拒绝，走手动输入
-      }
-    }
+  // ==================== 资料编辑 ====================
 
-    // 方式二：手动输入昵称
-    this.setNickname();
-  },
-
-  /** 手动设置昵称 */
-  setNickname() {
-    const current = this.data.userInfo.nickname || '';
-    wx.showModal({
-      title: '设置昵称',
-      editable: true,
-      placeholderText: '请输入昵称（最多10个字）',
-      content: current,
-      success: async (res) => {
-        if (res.confirm && res.content && res.content.trim()) {
-          await this.saveProfile(res.content.trim(), this.data.userInfo.avatar);
-        }
+  /** 打开资料编辑面板 */
+  openEdit() {
+    this.setData({
+      editing: true,
+      saving: false,
+      form: {
+        nickname: this.data.userInfo.nickname || '',
+        avatar: this.data.userInfo.avatar || '',
+        avatarIsLocal: false,
       },
     });
   },
 
-  async saveProfile(nickname, avatar) {
+  closeEdit() {
+    if (this.data.saving) return;
+    this.setData({ editing: false });
+  },
+
+  onNicknameInput(e) {
+    this.setData({ 'form.nickname': e.detail.value });
+  },
+
+  /**
+   * 微信昵称填写能力只在失焦时给出最终值，input 事件拿到的可能是中间态，
+   * 两个事件都以 blur 的值为准，避免用户点了「使用微信昵称」后没生效。
+   */
+  onNicknameBlur(e) {
+    const value = e.detail && e.detail.value;
+    if (value !== undefined) this.setData({ 'form.nickname': value });
+  },
+
+  /** 头像选择：拿到的是本地临时文件，等保存时才上传云存储 */
+  onChooseAvatar(e) {
+    const avatarUrl = e.detail && e.detail.avatarUrl;
+    if (!avatarUrl) return;
+    this.setData({ 'form.avatar': avatarUrl, 'form.avatarIsLocal': true });
+  },
+
+  async saveEdit() {
+    if (this.data.saving) return;
+
+    const nickname = String(this.data.form.nickname || '').trim();
+    if (!nickname) {
+      wx.showToast({ title: '请输入昵称', icon: 'none' });
+      return;
+    }
+    if (nickname.length > 12) {
+      wx.showToast({ title: '昵称最多 12 个字', icon: 'none' });
+      return;
+    }
+
+    this.setData({ saving: true });
     try {
-      await userAPI.updateProfile({ nickname, avatar: avatar || '' });
-      wx.showToast({ title: '资料已保存', icon: 'success' });
+      let avatar = this.data.form.avatar || '';
+      // 选过新头像：本地临时路径必须先传到云存储，否则杀进程后就是裂图
+      if (this.data.form.avatarIsLocal && avatar) {
+        avatar = await this.uploadAvatar(avatar);
+      }
+
+      await userAPI.updateProfile({ nickname, avatar });
+
+      const app = getApp();
+      app.globalData.userInfo = { ...(app.globalData.userInfo || {}), nickname, avatar };
+
+      this.setData({ editing: false, saving: false });
+      wx.showToast({ title: '已保存', icon: 'success' });
       this.init();
     } catch (err) {
-      wx.showToast({ title: '保存失败', icon: 'none' });
+      console.error('[Mine] 保存资料失败:', err);
+      this.setData({ saving: false });
+      wx.showToast({ title: (err && err.message) || '保存失败', icon: 'none' });
     }
+  },
+
+  /** 把临时头像文件传到云存储，返回可直接用于 <image src> 的 fileID */
+  async uploadAvatar(localPath) {
+    const match = String(localPath).match(/\.(\w+)$/);
+    let ext = match ? match[1].toLowerCase() : 'jpg';
+    if (ext === 'jpeg') ext = 'jpg';
+
+    const openid = getApp().globalData.openid || 'anon';
+    const cloudPath = `avatars/${openid}_${Date.now()}.${ext}`;
+    const res = await wx.cloud.uploadFile({ cloudPath, filePath: localPath });
+    return res.fileID;
   },
 
   goToBudget() {
@@ -141,15 +189,9 @@ Page({
   showAbout() {
     wx.showModal({
       title: '关于语音记账',
-      content: '语音记账 v1.0\n说一句话就能记账，智能分类、预算管理、消费分析，帮你管好每一分钱。',
+      content: '语音记账 v1.1\n说一句话就能记账，智能分类、预算管理、消费分析，帮你管好每一分钱。',
       showCancel: false,
       confirmText: '知道了',
-    });
-  },
-
-  promisify(api) {
-    return (options = {}) => new Promise((resolve, reject) => {
-      api({ ...options, success: resolve, fail: reject });
     });
   },
 });

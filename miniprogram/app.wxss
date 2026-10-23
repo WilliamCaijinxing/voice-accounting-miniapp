@@ -31,6 +31,10 @@ page {
   --font-xs: 22rpx;
   --font-sm: 26rpx;
   --font-base: 28rpx;
+  /* md 介于 base 与 lg 之间：弹窗标题、主按钮、菜单标题用。
+     补上这个 token 前，这三个地方写的是不存在的 --font-md，
+     字号静默失效退回继承值（不报错，很难发现）。 */
+  --font-md: 30rpx;
   --font-lg: 32rpx;
   --font-xl: 36rpx;
   --font-xxl: 44rpx;

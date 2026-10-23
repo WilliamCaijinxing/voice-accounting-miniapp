@@ -129,9 +129,6 @@
 }
 
 /* ============ 图表卡片 ============ */
-.chart-card {
-  margin-bottom: var(--spacing-sm);
-}
 
 /* 卡片头部通用（页内补全，与首页一致） */
 .card-header {
@@ -229,76 +226,6 @@
   text-align: right;
 }
 
-/* ============ 柱状图 ============ */
-.bar-chart {
-  width: 100%;
-}
-
-.bar-scroll {
-  width: 100%;
-}
-
-.bar-container {
-  display: flex;
-  align-items: flex-end;
-  gap: 8rpx;
-  height: 260rpx;
-  padding: 0 4rpx;
-  min-width: 100%;
-}
-
-.bar-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 50rpx;
-  flex-shrink: 0;
-}
-
-.bar-value {
-  margin-bottom: 4rpx;
-  font-size: 18rpx;
-  color: var(--color-expense);
-  white-space: nowrap;
-}
-
-.bar-value-text {
-  writing-mode: vertical-rl;
-  font-size: 18rpx;
-}
-
-.bar {
-  width: 32rpx;
-  border-radius: 6rpx 6rpx 0 0;
-  background: var(--color-divider);
-  transition: height 0.3s ease;
-  min-height: 4rpx;
-}
-
-.bar.active {
-  background: linear-gradient(180deg, #07C160, #06AD56);
-}
-
-.bar-label {
-  margin-top: 8rpx;
-  font-size: 20rpx;
-  color: var(--color-text-hint);
-}
-
-/* ============ 空状态 ============ */
-.empty-chart {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--spacing-xl) 0;
-  color: var(--color-text-hint);
-  font-size: var(--font-sm);
-}
-
-.empty-chart .empty-icon {
-  font-size: 48rpx;
-  margin-bottom: 8rpx;
-}
 
 /* ============ 消费分析建议 ============ */
 .advice-card {
@@ -642,19 +569,6 @@
   background: #07C160;
   color: #FFFFFF;
   font-weight: 600;
-}
-
-/* 全年 52 周：更窄的柱子 */
-.bar-container-wide {
-  min-width: 1680rpx;
-}
-
-.bar-column-thin {
-  width: 28rpx;
-}
-
-.bar-column-thin .bar {
-  width: 18rpx;
 }
 
 .chart-tip {

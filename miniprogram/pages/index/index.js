@@ -2,7 +2,7 @@
 //
 // 已合并原「记账页」：录音 → 识别 → 确认 → 保存 全在本页闭环完成，
 // 不再需要在两个 tab 之间来回切换。原 pages/record/record 保留为重定向壳页。
-const { formatAmount, getToday, getCategoryIcon } = require('../../utils/util');
+const { formatAmount, getToday, getCategoryIcon, pickProfile } = require('../../utils/util');
 const { voiceAPI, expenseAPI, statsAPI, budgetAPI, ledgerAPI } = require('../../utils/cloud');
 
 // 保存后「撤销条」的停留时长（秒）
@@ -249,12 +249,12 @@ Page({
   // 分享卡片携带 ledgerId 进入时，自动加入并切换
   async handleShareJoin(ledgerId, token) {
     try {
-      const userInfo = getApp().globalData.userInfo || {};
+      const profile = pickProfile(getApp().globalData.userInfo);
       const ledger = await ledgerAPI.joinByShare(
         ledgerId,
         token,
-        userInfo.nickName || '',
-        userInfo.avatarUrl || ''
+        profile.nickname,
+        profile.avatar
       );
       getApp().setCurrentLedger({ id: ledger._id, name: ledger.name, type: 'shared' });
       wx.showToast({ title: '已加入共享账本', icon: 'success' });

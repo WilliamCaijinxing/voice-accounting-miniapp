@@ -1,0 +1,55 @@
+<!-- components/trend-bars/trend-bars.wxml — 横向收支条形图 -->
+<view class="tbx-card">
+  <view class="tbx-header">
+    <text class="tbx-title">{{title}}</text>
+    <view class="tbx-legend">
+      <view class="tbx-legend-item">
+        <view class="tbx-legend-dot expense"></view>
+        <text class="tbx-legend-text">支出</text>
+      </view>
+      <view class="tbx-legend-item">
+        <view class="tbx-legend-dot income"></view>
+        <text class="tbx-legend-text">收入</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 翻页条：只有传了 navTitle 才出现 -->
+  <view class="tbx-nav" wx:if="{{navTitle}}">
+    <view class="tbx-nav-btn" bindtap="onPrev">‹</view>
+    <text class="tbx-nav-title">{{navTitle}}</text>
+    <view class="tbx-nav-btn {{nextDisabled ? 'is-disabled' : ''}}" bindtap="onNext">›</view>
+  </view>
+
+  <block wx:if="{{list.length > 0}}">
+    <view
+      wx:for="{{list}}"
+      wx:key="key"
+      class="tbx-row {{tappable ? 'is-tappable' : ''}}"
+      data-index="{{index}}"
+      bindtap="onRowTap"
+    >
+      <text class="tbx-row-label">{{item.label}}</text>
+      <view class="tbx-row-body">
+        <view class="tbx-line">
+          <view class="tbx-track">
+            <view class="tbx-bar expense" style="width: {{item.expPct}}%;"></view>
+          </view>
+          <text class="tbx-amount {{item._zeroExpense ? 'is-zero' : ''}}">{{item._fmtExpense}}</text>
+        </view>
+        <view class="tbx-line">
+          <view class="tbx-track">
+            <view class="tbx-bar income" style="width: {{item.incPct}}%;"></view>
+          </view>
+          <text class="tbx-amount income {{item._zeroIncome ? 'is-zero' : ''}}">{{item._fmtIncome}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="tbx-tip" wx:if="{{tip}}">{{tip}}</view>
+  </block>
+
+  <view class="tbx-empty" wx:else>
+    <text class="tbx-empty-icon">{{emptyIcon}}</text>
+    <text class="tbx-empty-text">{{emptyText}}</text>
+  </view>
+</view>

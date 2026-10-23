@@ -219,3 +219,169 @@
   font-size: 32rpx;
   color: var(--color-text-hint);
 }
+
+/* ============ 资料编辑面板 ============
+   微信已废弃 wx.getUserProfile，昵称头像改由
+   <button open-type="chooseAvatar"> + <input type="nickname"> 获取。
+   面板独立前缀 pe-，避免与其他页面同名类互相覆盖。 */
+.pe-card {
+  margin: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-md);
+  background: var(--color-bg-card);
+  border-radius: 24rpx;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pe-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+}
+
+.pe-title {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.pe-close {
+  width: 52rpx;
+  height: 52rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-base);
+  color: var(--color-text-hint);
+}
+
+/* button 自带边框与内边距，必须重置，否则头像外面会多一圈灰线 */
+.pe-avatar-btn {
+  position: relative;
+  width: 140rpx;
+  height: 140rpx;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  line-height: 1;
+  overflow: visible;
+}
+
+.pe-avatar-btn::after {
+  border: none;
+}
+
+.pe-avatar {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: var(--color-bg-page);
+  border: 4rpx solid var(--color-divider);
+}
+
+.pe-avatar-default {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64rpx;
+  color: var(--color-text-placeholder);
+  box-sizing: border-box;
+}
+
+.pe-avatar-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #FFFFFF;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.pe-avatar-hint {
+  margin-top: 12rpx;
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+}
+
+.pe-field {
+  width: 100%;
+  margin-top: var(--spacing-lg);
+  padding: 20rpx var(--spacing-md);
+  background: var(--color-bg-page);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.pe-label {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.pe-input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-base);
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+.pe-placeholder {
+  color: var(--color-text-placeholder);
+  font-size: var(--font-sm);
+}
+
+.pe-tip {
+  width: 100%;
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
+  line-height: 1.5;
+}
+
+.pe-actions {
+  width: 100%;
+  margin-top: var(--spacing-lg);
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.pe-btn {
+  flex: 1;
+  height: 84rpx;
+  border-radius: var(--radius-round);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-base);
+  font-weight: 600;
+}
+
+.pe-btn-ghost {
+  background: var(--color-bg-page);
+  color: var(--color-text-secondary);
+}
+
+.pe-btn-primary {
+  background: linear-gradient(135deg, #07C160, #06AD56);
+  color: #FFFFFF;
+}
+
+.pe-btn-primary.is-saving {
+  opacity: 0.6;
+}

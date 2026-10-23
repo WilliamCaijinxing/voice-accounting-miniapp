@@ -3,8 +3,8 @@
 <view class="mine-page">
 
   <!-- 用户卡片 -->
-  <view class="user-card">
-    <view class="user-avatar-wrap" bindtap="editProfile">
+  <view class="user-card" wx:if="{{!editing}}">
+    <view class="user-avatar-wrap" bindtap="openEdit">
       <image
         wx:if="{{userInfo.avatar}}"
         class="user-avatar"
@@ -15,7 +15,7 @@
       <view class="user-avatar-badge">✎</view>
     </view>
 
-    <view class="user-info" bindtap="editProfile">
+    <view class="user-info" bindtap="openEdit">
       <view class="user-nickname">
         <text wx:if="{{userInfo.nickname}}">{{userInfo.nickname}}</text>
         <text wx:else class="user-nickname-empty">点击完善资料</text>
@@ -24,7 +24,54 @@
       <view class="user-login-count" wx:else>已登录 {{userInfo.loginCount}} 次</view>
     </view>
 
-    <view class="user-edit-btn" bindtap="editProfile">完善资料</view>
+    <view class="user-edit-btn" bindtap="openEdit">修改资料</view>
+  </view>
+
+  <!-- 资料编辑面板：chooseAvatar + type="nickname"，微信当前唯一合规的昵称头像获取方式 -->
+  <view class="pe-card" wx:else>
+    <view class="pe-header">
+      <text class="pe-title">编辑资料</text>
+      <text class="pe-close" bindtap="closeEdit">✕</text>
+    </view>
+
+    <button
+      class="pe-avatar-btn"
+      open-type="chooseAvatar"
+      bindchooseavatar="onChooseAvatar"
+    >
+      <image
+        wx:if="{{form.avatar}}"
+        class="pe-avatar"
+        src="{{form.avatar}}"
+        mode="aspectFill"
+      ></image>
+      <view wx:else class="pe-avatar pe-avatar-default">👤</view>
+      <view class="pe-avatar-badge">✎</view>
+    </button>
+    <view class="pe-avatar-hint">点击更换头像</view>
+
+    <view class="pe-field">
+      <text class="pe-label">昵称</text>
+      <input
+        class="pe-input"
+        type="nickname"
+        value="{{form.nickname}}"
+        placeholder="输入昵称，或使用微信昵称"
+        placeholder-class="pe-placeholder"
+        maxlength="12"
+        bindinput="onNicknameInput"
+        bindblur="onNicknameBlur"
+      />
+    </view>
+
+    <view class="pe-tip">昵称会显示在共享账本的每一笔记录上，成员一看就知道是谁记的</view>
+
+    <view class="pe-actions">
+      <view class="pe-btn pe-btn-ghost" bindtap="closeEdit">取消</view>
+      <view class="pe-btn pe-btn-primary {{saving ? 'is-saving' : ''}}" bindtap="saveEdit">
+        {{saving ? '保存中' : '保存'}}
+      </view>
+    </view>
   </view>
 
   <!-- 数据概览 -->
