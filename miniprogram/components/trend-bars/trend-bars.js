@@ -29,12 +29,14 @@ Component({
 
   data: {
     empty: true,
-    // 点选浮层。leftPct 是相对绘图区宽度的百分比，
-    // 已夹在 [25, 75] 内，避免浮层在两端溢出卡片。
+    // 点选浮层。leftPct 是相对绘图区宽度的百分比（组中心，也就是指示线位置）；
+    // side 决定浮层贴在指示线的哪一侧——永远放在"外侧"，
+    // 保证不遮住用户正在看的那组柱子。
     tooltip: {
       visible: false,
       index: -1,
       leftPct: 50,
+      side: 'right',
       label: '',
       _fmtIncome: '0',
       _fmtExpense: '0',
@@ -66,13 +68,17 @@ Component({
       }
 
       const n = this.data.list.length || 1;
-      const raw = ((index + 0.5) / n) * 100;
+      // 组中心 = 指示线位置。下标落在左半区时浮层放右侧，反之放左侧，
+      // 这样浮层始终在指示线的"外侧"，不会盖住选中的柱子。
+      const leftPct = ((index + 0.5) / n) * 100;
+      const side = index + 0.5 < n / 2 ? 'right' : 'left';
 
       this.setData({
         tooltip: {
           visible: true,
           index,
-          leftPct: Math.min(75, Math.max(25, raw)),
+          leftPct,
+          side,
           label: item.label || '',
           _fmtIncome: item._fmtIncome,
           _fmtExpense: item._fmtExpense,

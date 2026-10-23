@@ -68,10 +68,10 @@
           style="left: {{tooltip.leftPct}}%;"
         ></view>
 
-        <!-- 点选浮层 -->
+        <!-- 点选浮层：浅色卡片，贴在指示线外侧（不压柱子） -->
         <view
           wx:if="{{tooltip.visible}}"
-          class="tbx-tooltip"
+          class="tbx-tooltip {{tooltip.side === 'left' ? 'is-left' : 'is-right'}}"
           style="left: {{tooltip.leftPct}}%;"
           catchtap="noop"
         >
