@@ -2,6 +2,9 @@
    组件样式默认隔离，app.wxss 的全局类不会作用到组件内节点，
    因此这里自带 .card 的定义（与 app.wxss 保持一致）。 */
 
+/* 分段器与统计页共用同一份定义；@import 进来的样式归属本组件作用域 */
+@import "../../styles/segment.wxss";
+
 .card {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
@@ -43,31 +46,7 @@
   text-overflow: ellipsis;
 }
 
-/* ---------- 收支切换器（胶囊分段器） ----------
-   容器与滑块都用 --radius-round：半径恒等于半高，将来调高度也不会变成长圆角方块。 */
-.cp-tabs {
-  display: flex;
-  flex-shrink: 0;
-  padding: 4rpx;
-  background: var(--color-bg-page);
-  border-radius: var(--radius-round);
-}
-
-.cp-tab {
-  padding: 6rpx 20rpx;
-  border-radius: var(--radius-round);
-  font-size: var(--font-xs);
-  color: var(--color-text-secondary);
-  line-height: 1.4;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.cp-tab.active {
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
-}
+/* 收支切换器用公共分段器样式（styles/segment.wxss），此处不再单独定义 */
 
 /* 饼图（conic-gradient 环形图） */
 .pie-container {

@@ -35,13 +35,28 @@ const rel = (p) => path.relative(ROOT, p).replace(/\\/g, '/');
 const appWxss = read(path.join(ROOT, 'app.wxss'));
 
 // 从 wxss 里抽类名。跳过注释，避免把注释里的示例类名当成已定义。
-const classesOf = (cssSrc) => {
-  const clean = cssSrc.replace(/\/\*[\s\S]*?\*\//g, '');
+// 递归展开 @import：被引文件里的类名也算「已定义」，否则公共样式一抽出来就全变误报。
+// baseDir 是被解析文件所在目录（@import 的相对路径以它为准）；seen 防循环引用。
+const classesOf = (cssSrc, baseDir, seen) => {
+  const visited = seen || new Set();
   const out = new Set();
-  for (const m of clean.matchAll(/\.(-?[A-Za-z_][\w-]*)/g)) out.add(m[1]);
+  // 注释先剥掉，否则被注释掉的 @import 也会被解析
+  const clean = cssSrc.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  const importRe = /@import\s+(?:url\()?\s*["']([^"']+)["']\s*\)?\s*[^;]*;/g;
+  for (const m of clean.matchAll(importRe)) {
+    const target = path.resolve(baseDir || ROOT, m[1]);
+    if (visited.has(target) || !fs.existsSync(target)) continue;
+    visited.add(target);
+    for (const c of classesOf(read(target), path.dirname(target), visited)) out.add(c);
+  }
+
+  // @import 语句本身要剔掉，否则路径里的 ".wxss" 会被当成类名 wsxx/wxss
+  const body = clean.replace(importRe, '');
+  for (const m of body.matchAll(/\.(-?[A-Za-z_][\w-]*)/g)) out.add(m[1]);
   return out;
 };
-const appClasses = classesOf(appWxss);
+const appClasses = classesOf(appWxss, ROOT);
 
 const errors = [];
 const warnings = [];
@@ -79,7 +94,9 @@ for (const wxmlPath of templates) {
 
   // ---- 3. class 是否有样式定义 ----
   const isComponent = name.startsWith('components/');
-  const ownWxss = fs.existsSync(`${file}.wxss`) ? classesOf(read(`${file}.wxss`)) : new Set();
+  const ownWxss = fs.existsSync(`${file}.wxss`)
+    ? classesOf(read(`${file}.wxss`), path.dirname(wxmlPath))
+    : new Set();
   const defined = isComponent ? ownWxss : new Set([...appClasses, ...ownWxss]);
 
   const missing = new Set();

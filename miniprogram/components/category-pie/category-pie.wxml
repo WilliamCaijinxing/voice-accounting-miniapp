@@ -7,11 +7,11 @@
   <view class="card-header cp-head" wx:if="{{!plain}}">
     <text class="card-title">{{icon}} {{label}}</text>
 
-    <view class="cp-tabs" wx:if="{{showTabs}}">
+    <view class="seg" wx:if="{{showTabs}}">
       <view
         wx:for="{{tabs}}"
         wx:key="key"
-        class="cp-tab {{type === item.key ? 'active' : ''}}"
+        class="seg-item {{type === item.key ? 'active' : ''}}"
         data-type="{{item.key}}"
         bindtap="onSwitch"
       >{{item.label}}</view>

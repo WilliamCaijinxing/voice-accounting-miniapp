@@ -1,5 +1,8 @@
 /* pages/statistics/statistics.wxss — 统计报表样式 */
 
+/* 分段器（支出/收入切换）与分类饼图组件共用同一份样式定义 */
+@import "../../styles/segment.wxss";
+
 /* ============ 当前账本指示 ============ */
 .ledger-indicator {
   display: flex;
@@ -394,30 +397,7 @@
   flex-shrink: 0;
 }
 
-/* 收支切换器（胶囊分段器）。半径恒等于半高，用 --radius-round 而不是写死 22rpx，
-   将来调整内边距/字号也不会变成长圆角方块。 */
-.sheet-tabs {
-  display: flex;
-  padding: 4rpx;
-  background: var(--color-bg-page);
-  border-radius: var(--radius-round);
-}
-
-.sheet-tab {
-  padding: 6rpx 22rpx;
-  border-radius: var(--radius-round);
-  font-size: var(--font-xs);
-  line-height: 1.4;
-  color: var(--color-text-secondary);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.sheet-tab.active {
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
-}
+/* 收支切换器改用公共分段器样式（styles/segment.wxss），此处不再单独定义 */
 
 .sheet-close {
   width: 52rpx;
@@ -505,10 +485,33 @@
 }
 
 .sheet-item-amount.income { color: var(--color-income); }
-.sheet-item-amount.expense { color: var(--color-expense); }.sheet-loading,
+.sheet-item-amount.expense { color: var(--color-expense); }
+
+.sheet-loading,
 .sheet-empty {
   text-align: center;
   padding: var(--spacing-xl) 0;
   font-size: var(--font-sm);
   color: var(--color-text-hint);
+}
+
+/* 弹窗取数失败。和 .load-error 同一套视觉语言（可点重试、文案中性），
+   但不带页面级外边距 —— 弹窗面板本身已有 padding，再加会缩进两次。 */
+.sheet-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl) 0;
+}
+
+.sheet-error-text {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+}
+
+.sheet-error-retry {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--color-primary);
 }

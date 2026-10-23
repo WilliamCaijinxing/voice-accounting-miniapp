@@ -239,14 +239,14 @@
       <text class="sheet-title">{{monthSheet.title}}</text>
 
       <view class="sheet-head-right">
-        <view class="sheet-tabs">
+        <view class="seg">
           <view
-            class="sheet-tab {{monthSheet.type === 'expense' ? 'active' : ''}}"
+            class="seg-item {{monthSheet.type === 'expense' ? 'active' : ''}}"
             data-type="expense"
             bindtap="switchSheetType"
           >支出</view>
           <view
-            class="sheet-tab {{monthSheet.type === 'income' ? 'active' : ''}}"
+            class="seg-item {{monthSheet.type === 'income' ? 'active' : ''}}"
             data-type="income"
             bindtap="switchSheetType"
           >收入</view>
@@ -256,6 +256,11 @@
     </view>
 
     <view class="sheet-loading" wx:if="{{monthSheet.loading}}">加载中…</view>
+
+    <view class="sheet-error" wx:elif="{{monthSheet.error}}" bindtap="retryMonthSheet">
+      <text class="sheet-error-text">分类数据加载失败</text>
+      <text class="sheet-error-retry">点击重试</text>
+    </view>
 
     <scroll-view scroll-y class="sheet-scroll" wx:else>
       <category-pie

@@ -1,0 +1,59 @@
+/* styles/segment.wxss — 分段器（支出 / 收入 切换）
+ *
+ * 样式参照 iOS Segmented Control：
+ *   灰色胶囊轨道 + 白色滑块，滑块比轨道高一点（上下各溢出 4rpx），
+ *   于是它有「浮在轨道上」的厚度，而不是嵌在里面的色块。
+ *   选中项只换文字颜色，不加粗 —— 参考图里两侧字重是一样的，
+ *   靠颜色和滑块的位移表达状态，比加粗更干净。
+ *
+ * 下面几个数字是从参考图按比例量出来的，改动前先看这行比例，别凭手感调：
+ *   滑块高 / 轨道高     = 1.16   （56 / 48）
+ *   轨道高 / 字号       = 1.85   （48 / 26）—— 这个比值决定「松不松」，
+ *                                  偏大就会变成文字缩在一个空荡荡的胶囊里
+ *   左右内边距 / 字号   = 0.77   （20 / 26）
+ *
+ * 这份样式被页面（statistics）和组件（category-pie）同时使用，所以抽成外联文件。
+ * 两边都用 @import 引入：在页面里它就是页面作用域，在组件里就是组件作用域，
+ * 各算各的，不会互相污染。
+ *
+ * 用法：
+ *   <view class="seg">
+ *     <view class="seg-item {{x === 'a' ? 'active' : ''}}" data-type="a" bindtap="...">支出</view>
+ *     <view class="seg-item {{x === 'b' ? 'active' : ''}}" data-type="b" bindtap="...">收入</view>
+ *   </view>
+ */
+
+.seg {
+  display: inline-flex;
+  align-items: center;
+  height: 48rpx;
+  padding: 0 4rpx;
+  background: var(--color-bg-track);
+  border-radius: var(--radius-round);
+  /* 滑块比轨道高，必须允许溢出，否则上下会被裁掉变成普通分段器 */
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.seg-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 56rpx > 轨道 48rpx，上下各溢出 4rpx：这是还原参考图的关键一处 */
+  height: 56rpx;
+  padding: 0 20rpx;
+  border-radius: var(--radius-round);
+  font-size: var(--font-sm);
+  line-height: 1;
+  color: var(--color-text-secondary);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.seg-item.active {
+  background: var(--color-bg-card);
+  color: var(--color-seg-active);
+  /* 双层阴影：近影让滑块有边界，远影让它离开轨道浮起来 */
+  box-shadow: 0 2rpx 8rpx rgba(17, 24, 20, 0.12), 0 1rpx 2rpx rgba(17, 24, 20, 0.06);
+}

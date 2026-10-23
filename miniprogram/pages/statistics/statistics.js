@@ -56,6 +56,9 @@ Page({
       expense: { list: [], total: '0', gradient: '' },
       income: { list: [], total: '0', gradient: '' },
       loading: false,
+      // 取数失败。不置这个位的话，失败会和「该月没有记账」长得一模一样，
+      // 用户看到的是「暂无记录」而不是「没取到」，属于静默说错话。
+      error: false,
     },
 
     // ============ 年视图 ============
@@ -530,6 +533,7 @@ Page({
       'monthSheet.expense': { list: [], total: '0', gradient: '' },
       'monthSheet.income': { list: [], total: '0', gradient: '' },
       'monthSheet.loading': true,
+      'monthSheet.error': false,
     });
 
     try {
@@ -549,8 +553,16 @@ Page({
     } catch (err) {
       console.error('Month category error:', err);
       if (this.data.monthSheet.ym !== ym) return;
-      this.setData({ 'monthSheet.loading': false });
+      this.setData({ 'monthSheet.loading': false, 'monthSheet.error': true });
     }
+  },
+
+  /** 弹窗取数失败后的重试：按当前 ym 重走一遍 open 流程 */
+  retryMonthSheet() {
+    const ym = this.data.monthSheet.ym;
+    if (!ym) return;
+    // 原样返回，调用方（包括测试）才能等它完成
+    return this.tapMonthBar({ detail: { item: { ym } } });
   },
 
   /** 弹窗标题栏右上角的支出/收入切换 */
