@@ -53,38 +53,7 @@
   background: #07C160;
   color: #FFFFFF;
   font-weight: 600;
-}
-
-/* ============ 月份切换 ============ */
-.month-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 var(--spacing-md) var(--spacing-sm);
-  gap: var(--spacing-lg);
-}
-
-.month-nav-btn {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 50%;
-  background: var(--color-bg-card);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 36rpx;
-  color: var(--color-text-secondary);
-  box-shadow: var(--shadow-sm);
-}
-
-.month-nav-title {
-  font-size: var(--font-xl);
-  font-weight: 700;
-  min-width: 200rpx;
-  text-align: center;
-}
-
-/* ============ 汇总卡片 ============ */
+}/* ============ 汇总卡片 ============ */
 .stats-summary {
   margin-bottom: var(--spacing-sm);
 }
@@ -100,11 +69,24 @@
   flex-direction: column;
   align-items: center;
   gap: 4rpx;
+  /* 三等分 + 可收缩：数字位数变多时先压缩间距，不会把「结余」挤出卡片 */
+  flex: 1;
+  min-width: 0;
+  padding: 0 4rpx;
 }
 
+/* 金额是这张卡唯一的主角，用 --font-xl 而不是 --font-lg：
+   原来 32rpx 和下方 22rpx 的标签落差太小，扫一眼分不出哪个是数字。
+   tabular-nums 让数字等宽，翻页或换账本时不会左右抖动。 */
 .summary-value {
-  font-size: var(--font-lg);
+  font-size: var(--font-xl);
   font-weight: 700;
+  letter-spacing: -0.5rpx;
+  font-variant-numeric: tabular-nums;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .summary-value.expense { color: var(--color-expense); }
@@ -145,89 +127,7 @@
 .card-link {
   font-size: var(--font-sm);
   color: var(--color-primary);
-}
-
-/* 饼图（conic-gradient 环形图） */
-.pie-container {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.pie-chart {
-  width: 220rpx;
-  height: 220rpx;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.pie-center {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: 50%;
-  background: var(--color-bg-card);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.pie-total-label {
-  font-size: var(--font-xs);
-  color: var(--color-text-hint);
-}
-
-.pie-total-amount {
-  font-size: var(--font-lg);
-  font-weight: 700;
-  color: var(--color-expense);
-}
-
-/* 图例 */
-.pie-legend {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-}
-
-.legend-dot {
-  width: 14rpx;
-  height: 14rpx;
-  border-radius: var(--radius-xs);
-  flex-shrink: 0;
-}
-
-.legend-name {
-  font-size: var(--font-sm);
-  color: var(--color-text-secondary);
-  flex: 1;
-}
-
-.legend-amount {
-  font-size: var(--font-sm);
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
-
-.legend-pct {
-  font-size: var(--font-xs);
-  color: var(--color-text-hint);
-  min-width: 60rpx;
-  text-align: right;
-}
-
-
-/* ============ 消费分析建议 ============ */
+}/* 图例 *//* ============ 消费分析建议 ============ */
 .advice-card {
   margin-bottom: var(--spacing-sm);
 }
@@ -300,14 +200,7 @@
 /* ============ 日历视图 ============ */
 .calendar-card {
   margin-bottom: var(--spacing-sm);
-}
-
-.card-hint {
-  font-size: var(--font-xs);
-  color: var(--color-text-hint);
-}
-
-.cal-nav {
+}.cal-nav {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -431,141 +324,13 @@
   color: var(--color-text-hint);
 }
 
-.cal-total-item { font-size: var(--font-xs); }
-
-/* ============ 折线图 ============ */
-.line-chart {
-  display: flex;
-  align-items: flex-start;
-  padding-top: 8rpx;
-}
-
-/* 左侧 Y 轴刻度 */
-.line-y-axis {
-  position: relative;
-  width: 68rpx;
-  flex-shrink: 0;
-}
-
-.line-y-label {
-  position: absolute;
-  left: 0;
-  width: 62rpx;
-  text-align: right;
-  font-size: 18rpx;
-  color: var(--color-text-hint);
-  transform: translateY(50%);
-  white-space: nowrap;
-}
-
-.line-scroll {
-  flex: 1;
-  width: 100%;
-  /* 不加 min-width:0 会导致 flex 子项被内容撑开、无法滚动 */
-  min-width: 0;
-}
-
-.line-inner {
-  position: relative;
-  padding-bottom: 4rpx;
-}
-
-.line-plot {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-}
-
-.line-grid {
-  position: absolute;
-  left: 0;
-  height: 1rpx;
-  background: var(--color-divider);
-}
-
-/* 面积渐变填充（clip-path 由 JS 计算） */
-.line-area {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  background: linear-gradient(180deg, rgba(7, 193, 96, 0.28), rgba(7, 193, 96, 0));
-}
-
-/* 折线段：以起点为旋转原点，长度/角度由 JS 在 rpx 坐标系下算出 */
-.line-seg {
-  position: absolute;
-  height: 4rpx;
-  border-radius: var(--radius-round);
-  background: #C8C9CC;
-  transform-origin: 0 50%;
-}
-
-.line-seg.active {
+.cal-total-item { font-size: var(--font-xs); }/* 左侧 Y 轴刻度 *//* 面积渐变填充（clip-path 由 JS 计算） *//* 折线段：以起点为旋转原点，长度/角度由 JS 在 rpx 坐标系下算出 */.line-seg.active {
   background: linear-gradient(90deg, #07C160, #06AD56);
-}
-
-.line-dot {
-  position: absolute;
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: 50%;
-  background: var(--color-bg-card);
-  border: 2rpx solid #C8C9CC;
-  box-sizing: border-box;
-}
-
-.line-dot.active {
+}.line-dot.active {
   background: #FFFFFF;
   border-color: #07C160;
   border-width: 3rpx;
-}
-
-/* 数值气泡（悬在点上，靠 topPad 留白避免裁切） */
-.line-dot-tip {
-  position: absolute;
-  left: 50%;
-  bottom: 16rpx;
-  transform: translateX(-50%);
-  font-size: 18rpx;
-  color: var(--color-expense);
-  white-space: nowrap;
-}
-
-.line-x-labels {
-  position: relative;
-  height: 40rpx;
-  margin-top: 6rpx;
-}
-
-.line-x-label {
-  position: absolute;
-  top: 0;
-  text-align: center;
-  font-size: 18rpx;
-  color: var(--color-text-hint);
-}
-
-/* ============ 子视图切换（周） ============ */
-.sub-tabs {
-  display: flex;
-  gap: 8rpx;
-  margin-bottom: var(--spacing-sm);
-  background: var(--color-bg-page);
-  border-radius: var(--radius-md);
-  padding: 4rpx;
-}
-
-.sub-tab {
-  flex: 1;
-  text-align: center;
-  padding: 10rpx 0;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-sm);
-  color: var(--color-text-secondary);
-}
-
-.sub-tab.active {
+}/* ============ 子视图切换（周） ============ */.sub-tab.active {
   background: #07C160;
   color: #FFFFFF;
   font-weight: 600;
@@ -614,6 +379,44 @@
   font-size: var(--font-md);
   font-weight: 700;
   color: var(--color-text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 标题栏右侧：收支切换器 + 关闭按钮 */
+.sheet-head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+}
+
+/* 收支切换器（胶囊分段器）。半径恒等于半高，用 --radius-round 而不是写死 22rpx，
+   将来调整内边距/字号也不会变成长圆角方块。 */
+.sheet-tabs {
+  display: flex;
+  padding: 4rpx;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-round);
+}
+
+.sheet-tab {
+  padding: 6rpx 22rpx;
+  border-radius: var(--radius-round);
+  font-size: var(--font-xs);
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sheet-tab.active {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 
 .sheet-close {
@@ -638,6 +441,16 @@
 
 .sheet-list {
   max-height: 52vh;
+}
+
+/* 分类饼图弹窗的滚动区：分类多时不把弹窗撑出屏幕。
+   flex + min-height:0 是必要的 —— 父级是 flex 纵向布局，
+   不给收缩属性的话 max-height 会被内容顶开，滚动条不生效。 */
+.sheet-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: 60vh;
+  padding-top: var(--spacing-sm);
 }
 
 .sheet-item {
@@ -692,17 +505,7 @@
 }
 
 .sheet-item-amount.income { color: var(--color-income); }
-.sheet-item-amount.expense { color: var(--color-expense); }
-
-.sheet-item-pct {
-  font-size: var(--font-xs);
-  color: var(--color-text-hint);
-  min-width: 60rpx;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.sheet-loading,
+.sheet-item-amount.expense { color: var(--color-expense); }.sheet-loading,
 .sheet-empty {
   text-align: center;
   padding: var(--spacing-xl) 0;

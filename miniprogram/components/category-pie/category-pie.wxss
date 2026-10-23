@@ -14,15 +14,59 @@
   margin-bottom: var(--spacing-sm);
 }
 
+/* plain 模式：弹窗内嵌用，不要卡片外壳和外边距 */
+.cp-plain {
+  padding: 0;
+}
+
 .card-header {
   padding-bottom: var(--spacing-sm);
   border-bottom: 1rpx solid var(--color-divider);
   margin-bottom: var(--spacing-sm);
 }
 
+/* 卡片头一行：左边标题，右边收支切换器 */
+.cp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
 .card-title {
   font-size: var(--font-base);
   font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 收支切换器（胶囊分段器） ----------
+   容器与滑块都用 --radius-round：半径恒等于半高，将来调高度也不会变成长圆角方块。 */
+.cp-tabs {
+  display: flex;
+  flex-shrink: 0;
+  padding: 4rpx;
+  background: var(--color-bg-page);
+  border-radius: var(--radius-round);
+}
+
+.cp-tab {
+  padding: 6rpx 20rpx;
+  border-radius: var(--radius-round);
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cp-tab.active {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 
 /* 饼图（conic-gradient 环形图） */
@@ -43,14 +87,15 @@
 }
 
 .pie-center {
-  width: 140rpx;
-  height: 140rpx;
+  width: 152rpx;
+  height: 152rpx;
   border-radius: 50%;
   background: var(--color-bg-card);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2rpx;
 }
 
 .pie-total-label {
@@ -58,11 +103,22 @@
   color: var(--color-text-hint);
 }
 
+/* 金额是这张卡的主角，用 --font-xl 而不是 --font-lg：
+   原来 32rpx 在 152rpx 的圆环里显得局促，和右侧图例的金额几乎同级，读起来没有主次。
+   tabular-nums 让数字等宽，位数变化时不会左右跳动。 */
 .pie-total-amount {
-  font-size: var(--font-lg);
+  font-size: var(--font-xl);
   font-weight: 700;
-  color: var(--color-expense);
+  letter-spacing: -0.5rpx;
+  font-variant-numeric: tabular-nums;
+  max-width: 140rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.pie-total-amount.expense { color: var(--color-expense); }
+.pie-total-amount.income { color: var(--color-income); }
 
 /* 图例 */
 .pie-legend {

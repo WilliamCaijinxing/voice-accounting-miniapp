@@ -96,11 +96,13 @@
     <view class="chart-tip">点击日期查看当天账目明细 · ‹ › 切换月份 · 点击月份标题回到今天</view>
   </view>
 
+  <!-- 分类饼图：支出 / 收入二选一，右上角小滑块切换 -->
   <category-pie
-    list="{{categoryStats}}"
-    total="{{_fmtTotalCategory}}"
-    label="{{_categoryLabel}}"
-    gradient="{{_pieGradient}}"
+    expense="{{expenseDist}}"
+    income="{{incomeDist}}"
+    type="{{categoryType}}"
+    label="{{categoryLabel}}"
+    bind:change="switchCategoryType"
   />
 </block>
 
@@ -114,7 +116,7 @@
     nav-title="{{monthTitle}}"
     next-disabled="{{monthOffset <= 0}}"
     show-detail-link="{{true}}"
-    tip="点击柱子查看当月数字 · 浮层里可看支出分类 · ‹ › 翻页查看更早历史"
+    tip="点击柱子查看当月数字 · 浮层里可看分类 · ‹ › 翻页查看更早历史"
     empty-icon="📈"
     empty-text="暂无月度数据"
     bind:itemtap="tapMonthBar"
@@ -132,12 +134,8 @@
     empty-text="暂无周数据"
   />
 
-  <category-pie
-    list="{{categoryStats}}"
-    total="{{_fmtTotalCategory}}"
-    label="{{_categoryLabel}}"
-    gradient="{{_pieGradient}}"
-  />
+  <!-- 这里原有一张「本月支出分类」饼图卡，与趋势图的「查看分类」完全重复，
+       已删除：月视图的分类统一从趋势图浮层进入，且现在支持支出/收入切换。 -->
 
   <!-- 消费分析建议 -->
   <view class="card advice-card" wx:if="{{advices.length > 0}}">
@@ -188,10 +186,11 @@
   />
 
   <category-pie
-    list="{{categoryStats}}"
-    total="{{_fmtTotalCategory}}"
-    label="{{_categoryLabel}}"
-    gradient="{{_pieGradient}}"
+    expense="{{expenseDist}}"
+    income="{{incomeDist}}"
+    type="{{categoryType}}"
+    label="{{categoryLabel}}"
+    bind:change="switchCategoryType"
   />
 </block>
 
@@ -231,34 +230,41 @@
   </view>
 </view>
 
-<!-- ==================== 月份分类弹窗 ==================== -->
+<!-- ==================== 月份分类弹窗（饼图 + 收支切换） ====================
+     一次只展示一种：支出/收入由右上角的小滑块切换，两套数据在打开时一次取齐，
+     之后切换是瞬时的。 -->
 <view class="sheet-mask" wx:if="{{monthSheet.visible}}" bindtap="closeMonthSheet">
   <view class="sheet-panel" catchtap="noop">
     <view class="sheet-header">
       <text class="sheet-title">{{monthSheet.title}}</text>
-      <text class="sheet-close" bindtap="closeMonthSheet">✕</text>
-    </view>
 
-    <view class="sheet-summary">
-      <text>总支出 ¥{{monthSheet.totalAmount}}</text>
-    </view>
-
-    <scroll-view scroll-y class="sheet-list">
-      <block wx:if="{{monthSheet.categories.length > 0}}">
-        <view
-          wx:for="{{monthSheet.categories}}"
-          wx:key="categoryId"
-          class="sheet-item"
-        >
-          <view class="legend-dot" style="background-color: {{item._color}};"></view>
-          <view class="sheet-item-body">
-            <text class="sheet-item-name">{{item.categoryName}}</text>
-          </view>
-          <text class="sheet-item-amount expense">¥{{item._fmtAmount}}</text>
-          <text class="sheet-item-pct">{{item.percentage}}%</text>
+      <view class="sheet-head-right">
+        <view class="sheet-tabs">
+          <view
+            class="sheet-tab {{monthSheet.type === 'expense' ? 'active' : ''}}"
+            data-type="expense"
+            bindtap="switchSheetType"
+          >支出</view>
+          <view
+            class="sheet-tab {{monthSheet.type === 'income' ? 'active' : ''}}"
+            data-type="income"
+            bindtap="switchSheetType"
+          >收入</view>
         </view>
-      </block>
-      <view wx:else class="sheet-empty">该月暂无支出</view>
+        <text class="sheet-close" bindtap="closeMonthSheet">✕</text>
+      </view>
+    </view>
+
+    <view class="sheet-loading" wx:if="{{monthSheet.loading}}">加载中…</view>
+
+    <scroll-view scroll-y class="sheet-scroll" wx:else>
+      <category-pie
+        plain="{{true}}"
+        show-tabs="{{false}}"
+        expense="{{monthSheet.expense}}"
+        income="{{monthSheet.income}}"
+        type="{{monthSheet.type}}"
+      />
     </scroll-view>
   </view>
 </view>

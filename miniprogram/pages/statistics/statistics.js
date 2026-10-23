@@ -47,18 +47,29 @@ Page({
     monthTitle: '',
     monthBars: [],
     monthYTicks: [],
-    monthSheet: { visible: false, ym: '', title: '', categories: [], totalAmount: '0' },
+    // 月份分类弹窗：支出/收入两套数据一次取齐，切换时不再发请求
+    monthSheet: {
+      visible: false,
+      ym: '',
+      title: '',
+      type: 'expense',
+      expense: { list: [], total: '0', gradient: '' },
+      income: { list: [], total: '0', gradient: '' },
+      loading: false,
+    },
 
     // ============ 年视图 ============
     yearBars: [],
     yearYTicks: [],
 
-    // ============ 共用：支出分类饼图 ============
-    categoryStats: [],          // [{categoryId, categoryName, amount, percentage, _fmtAmount}]
-    totalCategoryExpense: 0,
-    _fmtTotalCategory: '0',
-    _pieGradient: '',           // conic-gradient 内联样式字符串
-    _categoryLabel: '支出分类',  // 卡片标题（日视图为「今日」，月/年视图为该区间）
+    // ============ 共用：分类饼图（支出 / 收入可切换） ============
+    // 每一侧都是 { list, total, gradient }，由 buildCategorySide 一次性算好。
+    // 组件本身不做计算：WXML 不支持调用方法，百分比、渐变都要在 JS 侧备好。
+    categoryType: 'expense',   // 卡片当前展示哪一侧（受控，点切换器后由页面回写）
+    expenseDist: { list: [], total: '0', gradient: '' },
+    incomeDist: { list: [], total: '0', gradient: '' },
+    categoryLabel: '分类',
+    categoryIcon: '🍩',
 
     // ============ 月维度：预算 ============
     monthStats: { totalExpense: 0, totalIncome: 0, recordCount: 0, daysWithRecords: 0, avgDailyExpense: 0, balance: 0 },
@@ -200,9 +211,10 @@ Page({
     const { calYear, calMonth } = this.data;
     const todayStr = formatDate(new Date());
 
-    const [cal, catRes] = await Promise.all([
+    const [cal, expRes, incRes] = await Promise.all([
       statsAPI.calendar(calYear, calMonth, ledgerId),
       statsAPI.categoryStats(todayStr, todayStr, 'expense', ledgerId),
+      statsAPI.categoryStats(todayStr, todayStr, 'income', ledgerId),
     ]);
     if (seq !== this._dataSeq) return; // 已翻到别的月份或切换账本，丢弃
 
@@ -217,14 +229,17 @@ Page({
       monthIncome += d.income || 0;
     });
 
-    const catData = this.processCategoryData(catRes, '今日支出分类');
     this.setData({
       calTitle: `${calYear}年${calMonth}月`,
       calDays: days,
 
       calMonthExpense: formatAmount(monthExpense),
       calMonthIncome: formatAmount(monthIncome),
-      ...catData,
+
+      // 收入分类以前完全不展示，饼图只能看支出一侧
+      expenseDist: this.buildCategorySide(expRes),
+      incomeDist: this.buildCategorySide(incRes),
+      categoryLabel: '今日分类',
     });
   },
 
@@ -466,8 +481,8 @@ Page({
     const weekChart = this.buildTrendChart((weekTrend && weekTrend.weeks) || [], 'date');
 
     // 空响应兜底：云函数返回 null 时按空数据处理，不让 null 进入后续取属性的路径
-    const catData = this.processCategoryData(catStats, '本月支出分类');
-
+    // 月视图不再单独渲染分类卡片（与趋势图的「查看分类」重复），
+    // 这份支出分类只喂给消费分析里的「最大支出项」判断。
     const fmtMonthStats = {
       ...(monthData || {}),
       _fmtTotalExpense: formatAmount((monthData || {}).totalExpense),
@@ -482,7 +497,7 @@ Page({
       recentWeeks: weekChart.rows,
       recentYTicks: weekChart.yTicks,
       monthStats: fmtMonthStats,
-      ...catData,
+      expenseDist: this.buildCategorySide(catStats),
     });
   },
 
@@ -505,21 +520,52 @@ Page({
     const [y, m] = ym.split('-').map(Number);
     const startDate = `${ym}-01`;
     const endDate = `${ym}-${pad(new Date(y, m, 0).getDate())}`;
-    this.setData({ 'monthSheet.visible': true, 'monthSheet.ym': ym, 'monthSheet.title': `${y}年${m}月支出分类` });
+
+    // 先把弹窗立起来再取数：否则点下去到数据回来之间没有任何反馈，像是没点中
+    this.setData({
+      'monthSheet.visible': true,
+      'monthSheet.ym': ym,
+      'monthSheet.title': `${y}年${m}月`,
+      'monthSheet.type': 'expense',
+      'monthSheet.expense': { list: [], total: '0', gradient: '' },
+      'monthSheet.income': { list: [], total: '0', gradient: '' },
+      'monthSheet.loading': true,
+    });
 
     try {
-      const res = await statsAPI.categoryStats(startDate, endDate, 'expense', currentLedgerId());
-      const cats = ((res && res.categories) || []).map((c) => ({
-        ...c,
-        _fmtAmount: formatAmount(c.amount),
-        _color: this.getCategoryColor(c.categoryId),
-      }));
-      const total = (res && res.totalAmount) || 0;
-      this.setData({ 'monthSheet.categories': cats, 'monthSheet.totalAmount': formatAmount(total) });
+      const ledgerId = currentLedgerId();
+      // 支出与收入一次取齐：之后来回拨切换器是瞬时的，不再发请求
+      const [expRes, incRes] = await Promise.all([
+        statsAPI.categoryStats(startDate, endDate, 'expense', ledgerId),
+        statsAPI.categoryStats(startDate, endDate, 'income', ledgerId),
+      ]);
+      // 取数期间可能又点了别的月份，以最新的 ym 为准
+      if (this.data.monthSheet.ym !== ym) return;
+      this.setData({
+        'monthSheet.expense': this.buildCategorySide(expRes),
+        'monthSheet.income': this.buildCategorySide(incRes),
+        'monthSheet.loading': false,
+      });
     } catch (err) {
       console.error('Month category error:', err);
-      this.setData({ 'monthSheet.categories': [], 'monthSheet.totalAmount': '0' });
+      if (this.data.monthSheet.ym !== ym) return;
+      this.setData({ 'monthSheet.loading': false });
     }
+  },
+
+  /** 弹窗标题栏右上角的支出/收入切换 */
+  switchSheetType(e) {
+    const type = e && e.currentTarget && e.currentTarget.dataset
+      ? e.currentTarget.dataset.type : '';
+    if (!type || type === this.data.monthSheet.type) return;
+    this.setData({ 'monthSheet.type': type });
+  },
+
+  /** 页面正文分类卡片的支出/收入切换（日 / 年视图） */
+  switchCategoryType(e) {
+    const type = e && e.detail && e.detail.type;
+    if (!type || type === this.data.categoryType) return;
+    this.setData({ categoryType: type });
   },
 
   closeMonthSheet() {
@@ -535,36 +581,46 @@ Page({
     const yearStart = `${year}-01-01`;
     const yearEnd = `${year}-12-31`;
 
-    const [res, catRes] = await Promise.all([
+    const [res, expRes, incRes] = await Promise.all([
       statsAPI.trend({ range: 'year', ledgerId }),
       statsAPI.categoryStats(yearStart, yearEnd, 'expense', ledgerId),
+      statsAPI.categoryStats(yearStart, yearEnd, 'income', ledgerId),
     ]);
     if (seq !== this._dataSeq) return; // 已切换账本或维度，丢弃
 
     const yearChart = this.buildTrendChart((res && res.years) || [], 'year');
 
-    const catData = this.processCategoryData(catRes, '本年支出分类');
-    this.setData({ yearBars: yearChart.rows, yearYTicks: yearChart.yTicks, ...catData });
+    this.setData({
+      yearBars: yearChart.rows,
+      yearYTicks: yearChart.yTicks,
+      expenseDist: this.buildCategorySide(expRes),
+      incomeDist: this.buildCategorySide(incRes),
+      categoryLabel: '本年分类',
+    });
   },
 
   // ==================== 共用：分类饼图数据处理 ====================
 
-  /** 处理分类统计返回，生成饼图渐变和格式化字段 */
-  processCategoryData(res, label) {
+  /**
+   * 把云函数的分类统计加工成饼图组件要的一侧数据。
+   *
+   * 颜色与格式化金额都在这里预计算：WXML 不支持调用方法，
+   * 也不支持 Math.* 这类全局对象，写了会静默渲染为空。
+   *
+   * 支出与收入两侧用的是同一个函数 —— 口径一致，不会出现
+   * 「支出分类算了百分比、收入分类没算」这种半拉子状态。
+   */
+  buildCategorySide(res) {
     const cats = ((res && res.categories) || []).map((c) => ({
       ...c,
       _fmtAmount: formatAmount(c.amount),
-      // 颜色预计算：WXML 里调用 Page 方法并非官方支持，且每次渲染都会重复求值
       _color: this.getCategoryColor(c.categoryId),
     }));
     const total = (res && res.totalAmount) || cats.reduce((s, c) => s + c.amount, 0);
-    const gradient = this.buildPieGradient(cats);
     return {
-      categoryStats: cats,
-      totalCategoryExpense: total,
-      _fmtTotalCategory: formatAmount(total),
-      _pieGradient: gradient,
-      _categoryLabel: label,
+      list: cats,
+      total: formatAmount(total),
+      gradient: this.buildPieGradient(cats),
     };
   },
 
@@ -637,7 +693,8 @@ Page({
     const dailyAvg = expenseYuan / dayOfMonth;
     const projected = dailyAvg * daysInMonth;
 
-    const cats = this.data.categoryStats;
+    // 分类口径以支出侧为准：这里要判断的是「花得最多的那类」，收入分类不参与
+    const cats = this.data.expenseDist && this.data.expenseDist.list;
     if (cats && cats.length > 0) {
       const topCat = cats[0];
       const topPct = topCat.percentage;
