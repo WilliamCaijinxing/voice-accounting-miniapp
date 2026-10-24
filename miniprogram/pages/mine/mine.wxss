@@ -97,91 +97,6 @@
   font-weight: 600;
 }
 
-/* ============ 数据概览 ============ */
-.overview-card {
-  margin-bottom: var(--spacing-sm);
-}
-
-.overview-ledger {
-  display: flex;
-  align-items: center;
-  padding: 4rpx 0 16rpx;
-  border-bottom: 1rpx solid var(--color-border, #eee);
-  margin-bottom: 8rpx;
-}
-.overview-ledger-icon {
-  font-size: 28rpx;
-  margin-right: 10rpx;
-}
-.overview-ledger-name {
-  font-size: var(--font-sm, 26rpx);
-  font-weight: 600;
-  color: var(--color-primary, #07c160);
-}
-
-.overview-row {
-  display: flex;
-  justify-content: space-around;
-  padding: var(--spacing-sm) 0;
-}
-
-.overview-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4rpx;
-}
-
-.overview-value {
-  font-size: var(--font-lg);
-  font-weight: 700;
-}
-
-.overview-value.expense { color: var(--color-expense); }
-.overview-value.income { color: var(--color-income); }
-
-.overview-label {
-  font-size: var(--font-xs);
-  color: var(--color-text-hint);
-}
-
-.overview-divider {
-  width: 1rpx;
-  background: var(--color-divider);
-}
-
-/* 预算进度（迷你） */
-.budget-mini {
-  margin-top: var(--spacing-sm);
-  padding-top: var(--spacing-sm);
-  border-top: 1rpx solid var(--color-divider);
-}
-
-.budget-mini-info {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--font-xs);
-  color: var(--color-text-secondary);
-  margin-bottom: 8rpx;
-}
-
-.budget-mini-track {
-  height: 12rpx;
-  border-radius: var(--radius-round);
-  background: var(--color-divider);
-  overflow: hidden;
-}
-
-.budget-mini-fill {
-  height: 100%;
-  border-radius: var(--radius-round);
-  background: linear-gradient(90deg, #07C160, #06AD56);
-}
-
-.budget-mini-fill.over {
-  background: linear-gradient(90deg, #FA5151, #E64340);
-}
-
 /* ============ 功能菜单 ============ */
 .menu-card {
   padding: 0 var(--spacing-md);
@@ -393,4 +308,12 @@
 
 .pe-btn-primary.is-saving {
   opacity: 0.6;
+}
+
+/* ============ 页脚 ============ */
+.mine-footer {
+  margin-top: var(--spacing-lg);
+  text-align: center;
+  font-size: var(--font-xs);
+  color: var(--color-text-hint);
 }

@@ -1,6 +1,5 @@
 // pages/mine/mine.js — 我的页面
-const { formatAmount } = require('../../utils/util');
-const { userAPI, statsAPI, budgetAPI, currentLedgerId } = require('../../utils/cloud');
+const { userAPI } = require('../../utils/cloud');
 
 Page({
   data: {
@@ -10,15 +9,9 @@ Page({
       loginCount: 0,
     },
     openidTail: '',
-    todayExpense: '0',
-    monthExpense: '0',
-    monthIncome: '0',
-    budgetPercent: 0,
-    hasBudget: false,
-    budgetRemaining: '0',
     loading: true,
 
-    // 当前账本（概览所属）
+    // 当前账本（「功能入口」里的「当前账本」一项要用）
     currentLedgerName: '我的账本',
     isShared: false,
 
@@ -36,14 +29,10 @@ Page({
 
   async init() {
     this.setData({ loading: true });
-    const ledgerId = currentLedgerId();
     try {
-      const [user, today, month, budget] = await Promise.all([
-        userAPI.get().catch(() => null),
-        statsAPI.summary('today', ledgerId).catch(() => null),
-        statsAPI.summary('month', ledgerId).catch(() => null),
-        budgetAPI.get(ledgerId).catch(() => null),
-      ]);
+      // 这里原来并发取 today / month / budget 三份数据（共 3 次云函数调用），
+      // 只为了填「数据概览」卡。卡片删除后它们没有任何读取方，一并去掉。
+      const user = await userAPI.get().catch(() => null);
 
       const app = getApp();
       if (user) {
@@ -51,13 +40,6 @@ Page({
       }
 
       const openid = app.globalData.openid || (user && user._openid) || '';
-      const percent = budget && budget.monthlyBudget > 0
-        ? Math.min(100, Math.round(((month ? month.totalExpense : 0) / 100 / budget.monthlyBudget) * 100))
-        : 0;
-      const remaining = budget && budget.monthlyBudget > 0
-        ? (budget.monthlyBudget - ((month ? month.totalExpense : 0) / 100)).toFixed(2)
-        : '0';
-
       const ledger = app.getCurrentLedger();
       this.setData({
         userInfo: {
@@ -68,12 +50,6 @@ Page({
         openidTail: openid ? openid.slice(-6) : '',
         currentLedgerName: ledger.name,
         isShared: ledger.type === 'shared',
-        todayExpense: formatAmount(today ? today.totalExpense : 0),
-        monthExpense: formatAmount(month ? month.totalExpense : 0),
-        monthIncome: formatAmount(month ? month.totalIncome : 0),
-        budgetPercent: percent,
-        hasBudget: !!(budget && budget.monthlyBudget > 0),
-        budgetRemaining: remaining,
         loading: false,
       });
     } catch (err) {
@@ -178,12 +154,28 @@ Page({
     wx.navigateTo({ url: '/pages/export/export' });
   },
 
-  goToStats() {
-    wx.switchTab({ url: '/pages/statistics/statistics' });
-  },
-
   goToLedger() {
     wx.navigateTo({ url: '/pages/ledger/ledger' });
+  },
+
+  /**
+   * 记账技巧。语音记账真正的门槛是「怎么说」——首屏只有一行示例，
+   * 用户第二次进来就记不住说什么能识别准，这里给一份常驻说明。
+   * 不加后端、不加页面，就是一段静态文案。
+   */
+  showTips() {
+    wx.showModal({
+      title: '怎么说更准',
+      content: [
+        '1. 一句话只记一笔：说「午餐35元」，别把两笔连在一起说。',
+        '2. 金额带上单位：说「35元」「35块」，只说「35」容易被当成日期。',
+        '3. 分类会自动判断：「打车」「地铁」归交通，「午餐」「奶茶」归餐饮。',
+        '4. 收入直接说：「工资15000」「收到红包200」会自动记为收入。',
+        '5. 识别错了不用重说：确认卡片上点一下金额就能直接改。',
+      ].join('\n'),
+      showCancel: false,
+      confirmText: '知道了',
+    });
   },
 
   showAbout() {

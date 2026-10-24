@@ -74,57 +74,17 @@
     </view>
   </view>
 
-  <!-- 数据概览 -->
-  <view class="card overview-card">
-    <view class="overview-ledger">
-      <text class="overview-ledger-icon">{{isShared ? '👥' : '📒'}}</text>
-      <text class="overview-ledger-name">{{currentLedgerName}}</text>
-    </view>
-    <view class="overview-row">
-      <view class="overview-item">
-        <text class="overview-value expense">¥{{todayExpense}}</text>
-        <text class="overview-label">今日支出</text>
-      </view>
-      <view class="overview-divider"></view>
-      <view class="overview-item">
-        <text class="overview-value expense">¥{{monthExpense}}</text>
-        <text class="overview-label">本月支出</text>
-      </view>
-      <view class="overview-divider"></view>
-      <view class="overview-item">
-        <text class="overview-value income">¥{{monthIncome}}</text>
-        <text class="overview-label">本月收入</text>
-      </view>
-    </view>
-
-    <!-- 预算进度 -->
-    <view class="budget-mini" wx:if="{{hasBudget}}" bindtap="goToBudget">
-      <view class="budget-mini-info">
-        <text>本月预算已用 {{budgetPercent}}%</text>
-        <text class="{{budgetRemaining >= 0 ? 'income' : 'expense'}}">剩余 ¥{{budgetRemaining}}</text>
-      </view>
-      <view class="budget-mini-track">
-        <view class="budget-mini-fill {{budgetPercent > 100 ? 'over' : ''}}" style="width: {{budgetPercent}}%;"></view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 功能入口 -->
+  <!-- 功能入口。
+       这里原有第一项「消费统计」，但统计页本来就是底部 tab，用户从 tab 直达更快，
+       留着只是把同一个入口写两遍，已删除。
+       原「数据概览」卡删掉后，当前账本身份在这一页彻底消失了（首页只在顶部账本栏显示），
+       所以把「共享账本」这一项改成「当前账本」，顺带把账本名补回来。 -->
   <view class="card menu-card">
-    <view class="menu-item" bindtap="goToStats">
-      <text class="menu-icon">📊</text>
-      <view class="menu-body">
-        <text class="menu-title">消费统计</text>
-        <text class="menu-desc">日/月/年多维报表与趋势</text>
-      </view>
-      <text class="menu-arrow">›</text>
-    </view>
-
     <view class="menu-item" bindtap="goToLedger">
-      <text class="menu-icon">👥</text>
+      <text class="menu-icon">{{isShared ? '👥' : '📒'}}</text>
       <view class="menu-body">
-        <text class="menu-title">共享账本</text>
-        <text class="menu-desc">和家人朋友一起记账，账单一目了然</text>
+        <text class="menu-title">当前账本</text>
+        <text class="menu-desc">{{currentLedgerName}}{{isShared ? ' · 共享账本' : ' · 个人账本'}}</text>
       </view>
       <text class="menu-arrow">›</text>
     </view>
@@ -138,11 +98,22 @@
       <text class="menu-arrow">›</text>
     </view>
 
+    <!-- 导入页唯一的入口原本藏在导出页里，要导入得先点「导出」。
+         这里改叫「导入导出」，把两条路径都摆到名字上。 -->
     <view class="menu-item" bindtap="goToExport">
       <text class="menu-icon">📤</text>
       <view class="menu-body">
-        <text class="menu-title">账本导出</text>
-        <text class="menu-desc">导出 CSV 账单，Excel/WPS 可打开</text>
+        <text class="menu-title">导入导出</text>
+        <text class="menu-desc">导入表格历史账单，或导出 CSV</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <view class="menu-item" bindtap="showTips">
+      <text class="menu-icon">🎙️</text>
+      <view class="menu-body">
+        <text class="menu-title">记账技巧</text>
+        <text class="menu-desc">怎么说才能一次识别准确</text>
       </view>
       <text class="menu-arrow">›</text>
     </view>
@@ -155,6 +126,13 @@
       </view>
       <text class="menu-arrow">›</text>
     </view>
+  </view>
+
+  <!-- 页脚：版本与登录次数。这两条信息原来只有「关于」弹窗里才有，
+       摊在页脚比每次弹窗更省事，也让页面有个收尾。 -->
+  <view class="mine-footer">
+    <text>语音记账 v1.1</text>
+    <text wx:if="{{userInfo.loginCount}}"> · 已登录 {{userInfo.loginCount}} 次</text>
   </view>
 
   <view class="safe-bottom" style="height: 120rpx;"></view>

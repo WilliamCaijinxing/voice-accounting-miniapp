@@ -53,10 +53,29 @@
   color: #FFFFFF;
 }
 
+/* 日期行：左边日期，右边一句本月概览。
+   用同一行而不是新起一行，卡片高度一点没变 —— 这是「简化」而不是「少给信息」。 */
+.hero-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
 .hero-date {
   font-size: var(--font-xs);
   opacity: 0.85;
-  margin-bottom: var(--spacing-sm);
+}
+
+.hero-month {
+  flex-shrink: 1;
+  min-width: 0;
+  margin-left: var(--spacing-sm);
+  font-size: var(--font-xs);
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hero-summary {
@@ -460,83 +479,6 @@
 
 /* ============ 卡片通用 ============ */
 .card { margin-bottom: 0; }
-
-/* ============ 本月账本卡（原预算卡 + 月概览卡合并） ============ */
-.month-stats-row {
-  display: flex;
-  justify-content: space-around;
-  padding: var(--spacing-sm) 0;
-}
-
-.month-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4rpx;
-}
-
-.month-stat-value { font-size: var(--font-lg); font-weight: 700; }
-.month-stat-value.expense { color: var(--color-expense); }
-.month-stat-value.income { color: var(--color-income); }
-
-.month-stat-label {
-  font-size: var(--font-xs);
-  color: var(--color-text-hint);
-}
-
-.budget-section {
-  margin-top: var(--spacing-sm);
-  padding-top: var(--spacing-sm);
-  border-top: 1rpx solid var(--color-divider);
-}
-
-.budget-bar-info {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--font-xs);
-  color: var(--color-text-secondary);
-  margin-bottom: 8rpx;
-}
-
-.budget-bar-track {
-  height: 16rpx;
-  border-radius: var(--radius-round);
-  background: var(--color-divider);
-  overflow: hidden;
-}
-
-.budget-bar-fill {
-  height: 100%;
-  border-radius: var(--radius-round);
-  background: linear-gradient(90deg, #07C160, #06AD56);
-  transition: width 0.4s ease;
-}
-
-.budget-bar-fill.danger { background: linear-gradient(90deg, #FFB03A, #FF9500); }
-.budget-bar-fill.over { background: linear-gradient(90deg, #FA5151, #E64340); }
-
-.budget-bar-detail {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8rpx;
-  font-size: var(--font-xs);
-}
-
-.budget-bar-daily { color: var(--color-text-hint); }
-
-.budget-setting-link {
-  display: block;
-  margin-top: var(--spacing-sm);
-  font-size: var(--font-sm);
-  color: var(--color-primary);
-}
-
-.no-budget {
-  margin-top: var(--spacing-sm);
-  padding-top: var(--spacing-sm);
-  border-top: 1rpx solid var(--color-divider);
-  text-align: center;
-}
 
 /* 只读成员视图（P1-8）：viewer 在共享账本里不能记账 */
 .readonly-zone {

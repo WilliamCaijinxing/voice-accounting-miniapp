@@ -1,5 +1,5 @@
 // pages/statistics/statistics.js — 统计报表页（日 / 月 / 年 三维度）
-// 「周」不再是独立维度，降级为月视图里的「近12周支出」小图，少一层嵌套切换。
+// 「周」维度已整体移除（曾降级为月视图小图，最终判定为与月度趋势重复）。
 const { formatAmount, getCategoryIcon, formatDate } = require('../../utils/util');
 const { statsAPI, budgetAPI, expenseAPI, currentLedgerId } = require('../../utils/cloud');
 
@@ -35,12 +35,6 @@ Page({
     calMonthExpense: '0',  // 当月支出合计（日历底部小结）
     calMonthIncome: '0',   // 当月收入合计
     daySheet: { visible: false, date: '', loading: false, list: [], totalExpense: '0', totalIncome: '0' },
-
-    // ============ 近12周（展示在月视图内） ============
-    // 每项: { key, label, showLabel, expense, income, expPct, incPct,
-    //        _fmtExpense, _fmtIncome, _zeroExpense, _zeroIncome }
-    recentWeeks: [],
-    recentYTicks: [],
 
     // ============ 月视图 ============
     monthOffset: 0,        // 0=最近12个月，1=再往前12个月…
@@ -469,19 +463,17 @@ Page({
     const monthStart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
     const monthEnd = formatDate(now);
 
-    const [trend, monthData, catStats, weekTrend] = await Promise.all([
+    // 「近12周收支」小图已删除：月视图里两张趋势图信息重叠，
+    // 周维度又与月度趋势讲同一件事，去掉后这次并发从 4 个请求降到 3 个。
+    const [trend, monthData, catStats] = await Promise.all([
       statsAPI.trend({ range: 'month', offset: monthOffset, ledgerId }),
       statsAPI.monthly(now.getFullYear(), now.getMonth() + 1, ledgerId),
       statsAPI.categoryStats(monthStart, monthEnd, 'expense', ledgerId),
-      statsAPI.trend({ range: 'week', recent: 12, ledgerId }),
     ]);
     if (seq !== this._dataSeq) return; // 已翻到别的月份区间或切换账本，丢弃
 
     // 支出与收入共用同一分母（刻度上限），各自算 max 会让两根柱子失去可比性
     const monthChart = this.buildTrendChart((trend && trend.months) || [], 'ym');
-
-    // 近12周（原「周」维度降级为月视图内的小图）
-    const weekChart = this.buildTrendChart((weekTrend && weekTrend.weeks) || [], 'date');
 
     // 空响应兜底：云函数返回 null 时按空数据处理，不让 null 进入后续取属性的路径
     // 月视图不再单独渲染分类卡片（与趋势图的「查看分类」重复），
@@ -497,8 +489,6 @@ Page({
       monthTitle: `${(trend && trend.startYm) || ''} ~ ${(trend && trend.endYm) || ''}`,
       monthBars: monthChart.rows,
       monthYTicks: monthChart.yTicks,
-      recentWeeks: weekChart.rows,
-      recentYTicks: weekChart.yTicks,
       monthStats: fmtMonthStats,
       expenseDist: this.buildCategorySide(catStats),
     });

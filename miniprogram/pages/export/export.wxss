@@ -147,12 +147,6 @@
   margin-top: var(--spacing-lg);
 }
 
-.result-btn {
-  margin-top: var(--spacing-md);
-  height: 72rpx;
-  font-size: var(--font-sm);
-}
-
 /* ============ 文件获取方式 ============ */
 .file-guide {
   margin-top: var(--spacing-md);

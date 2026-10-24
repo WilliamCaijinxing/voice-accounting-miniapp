@@ -3,7 +3,7 @@
 // 已合并原「记账页」：录音 → 识别 → 确认 → 保存 全在本页闭环完成，
 // 不再需要在两个 tab 之间来回切换。原 pages/record/record 保留为重定向壳页。
 const { formatAmount, getToday, getCategoryIcon, pickProfile } = require('../../utils/util');
-const { voiceAPI, expenseAPI, statsAPI, budgetAPI, ledgerAPI } = require('../../utils/cloud');
+const { voiceAPI, expenseAPI, statsAPI, ledgerAPI } = require('../../utils/cloud');
 
 // 保存后「撤销条」的停留时长（秒）
 const UNDO_SECONDS = 5;
@@ -15,20 +15,17 @@ Page({
   data: {
     /* ========== 仪表盘 ========== */
     todayStats: { totalExpense: 0, totalIncome: 0, recordCount: 0, categoryBreakdown: [] },
+    // 只用于日期行右侧那一句「本月已花 ¥x · 日均 ¥y」。
+    // 原来还有一张「X月账本」卡（月支出/收入/结余 + 预算条），与统计页汇总卡、
+    // 我的页概览卡讲同一组数字，三处重复，已删除。
     monthStats: null,
     recentList: [],
     // 最近账单的真实总数（recentList 只取前 10 条，不能用 length 当总数）
     recentTotal: 0,
     todayText: '',
-    currentMonth: new Date().getMonth() + 1,
     loading: true,
     // 本次刷新是否失败（网络异常时不再静默停留在旧数据，见 loadData 的 catch）
     loadError: false,
-
-    // 预算
-    budget: null,
-    budgetPercent: 0,
-    budgetRemaining: 0,
 
     /* ========== 账本 ========== */
     ledgers: [{ id: '', name: '我的账本', type: 'personal' }],
@@ -61,7 +58,6 @@ Page({
     const now = new Date();
     this.setData({
       todayText: `${now.getMonth() + 1}月${now.getDate()}日 ${this.getWeekday(now.getDay())}`,
-      currentMonth: now.getMonth() + 1,
     });
 
     this.initRecorder();
@@ -186,11 +182,9 @@ Page({
         },
         monthStats: {
           ...month,
+          // 只保留日期行右侧那一句要用的两个数字，其余格式化字段随卡片一起删掉了
           _fmtTotalExpense: formatAmount(month.totalExpense),
-          _fmtTotalIncome: formatAmount(month.totalIncome),
-          _fmtBalance: formatAmount(Math.abs(month.balance || 0)),
-          _balanceSign: (month.balance || 0) >= 0 ? '+' : '-',
-          _balanceClass: (month.balance || 0) >= 0 ? 'income' : 'expense',
+          _fmtAvgDaily: formatAmount(month.avgDailyExpense),
         },
         recentList: list.map(item => ({
           ...item,
@@ -201,9 +195,6 @@ Page({
         recentTotal: total,
         loading: false,
       });
-
-      // 并行加载预算信息（失败不影响主流程；带 seq 防止旧账本的预算写入新账本）
-      this.loadBudgetInfo(month.totalExpense, ledgerId, seq).catch(() => {});
     } catch (err) {
       if (seq !== this._dataSeq) return;
       console.error('[Index] loadData error:', err);
@@ -218,33 +209,6 @@ Page({
     this.refresh();
   },
 
-  // 加载预算信息（共享账本传入 ledgerId）
-  async loadBudgetInfo(monthExpense, ledgerId = '', seq) {
-    try {
-      const budget = await budgetAPI.get(ledgerId);
-      if (seq !== undefined && seq !== this._dataSeq) return; // 账本已切换，丢弃
-      if (budget && budget.monthlyBudget > 0) {
-        const percent = Math.round((monthExpense / 100 / budget.monthlyBudget) * 100);
-        const remaining = budget.monthlyBudget - monthExpense / 100;
-        // 本月剩余天数（含今天）
-        const now = new Date();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const remainingDays = daysInMonth - now.getDate() + 1;
-        this.setData({
-          budget: budget,
-          budgetPercent: percent,
-          budgetRemaining: remaining,
-          _fmtBudgetRemaining: formatAmount(Math.max(0, remaining) * 100),
-          _fmtBudgetOver: formatAmount(Math.max(0, -remaining) * 100),
-          _dailyAvailable: remainingDays > 0 ? Math.max(0, remaining / remainingDays).toFixed(0) : '0',
-        });
-      } else {
-        this.setData({ budget: null });
-      }
-    } catch (err) {
-      this.setData({ budget: null });
-    }
-  },
 
   // 分享卡片携带 ledgerId 进入时，自动加入并切换
   async handleShareJoin(ledgerId, token) {
@@ -886,14 +850,6 @@ Page({
   },
 
   // ==================== 页面跳转 ====================
-
-  goToBudget() {
-    wx.navigateTo({ url: '/pages/budget/budget' });
-  },
-
-  goToStats() {
-    wx.switchTab({ url: '/pages/statistics/statistics' });
-  },
 
   goToLedger() {
     wx.navigateTo({ url: '/pages/ledger/ledger' });
